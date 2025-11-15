@@ -1,0 +1,33 @@
+.page-container {
+  background: #fff;
+  padding: 26px;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 18px;
+  font-weight: 700;
+}
+
+.contract-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.contract-table th {
+  background: #2d2d42;
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+}
+
+.contract-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.contract-table tr:hover {
+  background: #f4f4f9;
+}

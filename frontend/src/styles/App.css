@@ -1,0 +1,11 @@
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f1f3f6;
+}
+
+.main-content {
+  flex: 1;
+  padding: 24px;
+}

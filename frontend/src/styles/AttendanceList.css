@@ -1,0 +1,33 @@
+.page-container {
+  background: #fff;
+  padding: 26px;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 18px;
+  font-weight: 700;
+}
+
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attendance-table th {
+  background: #2d2d42;
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+}
+
+.attendance-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.attendance-table tr:hover {
+  background: #f4f4f9;
+}
