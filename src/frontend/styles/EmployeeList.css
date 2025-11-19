@@ -1,0 +1,177 @@
+/* Card chung giống AttendanceList */
+.page-container {
+  background: #fff;
+  padding: 26px;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 18px;
+  font-weight: 700;
+}
+
+/* Header: tiêu đề + ô tìm kiếm + nút thêm */
+.employee-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.employee-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.employee-search {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  min-width: 260px;
+}
+
+/* Bảng nhân viên */
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.employee-table th {
+  background: #2d2d42; /* giống header chấm công */
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+}
+
+.employee-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.employee-table tr:hover {
+  background: #f4f4f9;
+}
+
+/* Badge chức vụ và các nút */
+.badge-pos {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #fff;
+}
+
+.badge-pos.T {
+  background: #2563eb;
+}
+
+.badge-pos.P {
+  background: #10b981;
+}
+
+.badge-pos.N {
+  background: #6b7280;
+}
+
+.btn-add {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #111827;
+  color: #fff;
+  font-size: 14px;
+}
+
+.btn-add:hover {
+  filter: brightness(0.95);
+}
+
+.btn-small {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #fff;
+}
+
+.btn-edit {
+  background: #3b82f6;
+  margin-right: 6px;
+}
+
+.btn-delete {
+  background: #ef4444;
+}
+
+/* Modal thêm/sửa (giữ style nhẹ nhàng) */
+.employee-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 8%;
+}
+
+.employee-modal {
+  max-width: 520px;
+  width: 100%;
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.employee-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.employee-modal-form {
+  display: grid;
+  row-gap: 10px;
+}
+
+.employee-modal-row {
+  display: flex;
+  gap: 12px;
+}
+
+.employee-modal-row > div {
+  flex: 1;
+}
+
+.employee-modal label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.employee-modal input,
+.employee-modal select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.employee-modal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.employee-modal-actions button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}

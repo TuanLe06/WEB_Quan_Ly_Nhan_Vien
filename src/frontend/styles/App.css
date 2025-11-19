@@ -36,3 +36,16 @@
     transform: rotate(360deg);
   }
 }
+/* App.css – thêm vào cuối file */
+
+.app-layout {
+  display: flex;
+}
+
+/* phần nội dung bên phải sidebar */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  background: #f4f4f9;   /* nền xám nhẹ giống ảnh */
+  min-height: 100vh;
+}

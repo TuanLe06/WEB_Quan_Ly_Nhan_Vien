@@ -1,0 +1,60 @@
+.page-container {
+  background: #fff;
+  padding: 26px;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 18px;
+  font-weight: 700;
+}
+
+.approval-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.approval-table th {
+  background: #2d2d42;
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+}
+
+.approval-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.approval-table tr:hover {
+  background: #f4f4f9;
+}
+
+.btn-approve {
+  padding: 6px 12px;
+  margin-right: 6px;
+  background: #2ecc71;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-approve:hover {
+  background: #27ae60;
+}
+
+.btn-reject {
+  padding: 6px 12px;
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-reject:hover {
+  background: #c0392b;
+}

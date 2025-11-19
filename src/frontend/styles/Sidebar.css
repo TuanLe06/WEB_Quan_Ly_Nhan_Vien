@@ -1,0 +1,86 @@
+.sidebar {
+  width: 220px;
+  background: #2d2d42;
+  min-height: 100vh;
+  padding: 20px;
+  color: #fff;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+}
+
+.sidebar-title {
+  font-size: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.sidebar nav a {
+  display: block;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.sidebar nav a:hover {
+  background: #464766;
+}
+
+.sidebar nav a.active {
+  background: #ff7f50;
+  color: #fff;
+}
+/* Bố cục tổng: sidebar + nội dung bên phải */
+.app-layout {
+  display: flex;
+}
+
+.main-content {
+  flex: 1;
+  padding: 24px;
+  background: #f4f4f9;   /* nền xám giống video */
+  min-height: 100vh;
+}
+
+/* đường kẻ mảnh ngăn 2 nhóm menu */
+.sidebar-separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 12px 0;
+}
+.sidebar-separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  margin: 12px 0;
+}
+
+.sidebar-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-user {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.sidebar-logout {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  background: #ff7f50;
+  color: #fff;
+}
+
+.sidebar-logout:hover {
+  filter: brightness(0.95);
+}
+
