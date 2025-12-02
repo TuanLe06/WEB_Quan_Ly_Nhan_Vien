@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import Loading from './common/Loading';
 
 interface PrivateRouteProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {

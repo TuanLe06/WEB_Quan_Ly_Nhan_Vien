@@ -2,33 +2,27 @@ import axios from './axiosConfig';
 import { Position, ApiResponse } from '../types';
 
 export const positionApi = {
-  // Lấy danh sách chức vụ
-  getAll: async (): Promise<Position[]> => {
-    const response = await axios.get<ApiResponse<Position[]>>('/positions');
-    return response.data.data || [];
+  // GET /api/positions
+  getAll: async (): Promise<ApiResponse<Position[]>> => {
+    const { data } = await axios.get<ApiResponse<Position[]>>('/positions');
+    return data;
   },
 
-  // Lấy thông tin chi tiết chức vụ
-  getById: async (id: string): Promise<Position> => {
-    const response = await axios.get<ApiResponse<Position>>(`/positions/${id}`);
-    return response.data.data!;
+  // POST /api/positions
+  create: async (position: Omit<Position, 'so_nhan_vien'>): Promise<ApiResponse<Position>> => {
+    const { data } = await axios.post<ApiResponse<Position>>('/positions', position);
+    return data;
   },
 
-  // Thêm chức vụ mới
-  create: async (data: Position): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/positions', data);
-    return response.data;
+  // PUT /api/positions/:id
+  update: async (ma_chuc_vu: string, position: Partial<Position>): Promise<ApiResponse<Position>> => {
+    const { data } = await axios.put<ApiResponse<Position>>(`/positions/${ma_chuc_vu}`, position);
+    return data;
   },
 
-  // Cập nhật chức vụ
-  update: async (id: string, data: Partial<Position>): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/positions/${id}`, data);
-    return response.data;
+  // DELETE /api/positions/:id
+  delete: async (ma_chuc_vu: string): Promise<ApiResponse> => {
+    const { data } = await axios.delete<ApiResponse>(`/positions/${ma_chuc_vu}`);
+    return data;
   },
-
-  // Xóa chức vụ
-  delete: async (id: string): Promise<ApiResponse> => {
-    const response = await axios.delete<ApiResponse>(`/positions/${id}`);
-    return response.data;
-  }
 };

@@ -1,58 +1,58 @@
 import axios from './axiosConfig';
-import { Contract, ApiResponse } from '../types';
+import { Contract, ApiResponse, PaginatedResponse, PaginationParams } from '../types';
 
 export const contractApi = {
-  // Thêm hợp đồng mới
-  create: async (data: Omit<Contract, 'id' | 'ngay_tao' | 'trang_thai' | 'con_lai_ngay'>): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/contracts', data);
-    return response.data;
+  // GET /api/contracts
+  getAll: async (params?: PaginationParams): Promise<PaginatedResponse<Contract[]>> => {
+    const { data } = await axios.get<PaginatedResponse<Contract[]>>('/contracts', { params });
+    return data;
   },
 
-  // Lấy danh sách hợp đồng
-  getAll: async (params?: {
-    ma_nv?: string;
-    loai_hop_dong?: string;
-    ma_phong?: string;
-  }): Promise<Contract[]> => {
-    const response = await axios.get<ApiResponse<Contract[]>>('/contracts', { params });
-    return response.data.data || [];
+  // GET /api/contracts/:id
+  getById: async (id: number): Promise<ApiResponse<Contract>> => {
+    const { data } = await axios.get<ApiResponse<Contract>>(`/contracts/${id}`);
+    return data;
   },
 
-  // Lấy chi tiết hợp đồng
-  getById: async (id: number): Promise<Contract> => {
-    const response = await axios.get<ApiResponse<Contract>>(`/contracts/${id}`);
-    return response.data.data!;
-  },
-
-  // Hợp đồng sắp hết hạn
-  getExpiring: async (days: number = 30): Promise<Contract[]> => {
-    const response = await axios.get<ApiResponse<Contract[]>>('/contracts/expiring', {
-      params: { days }
+  // POST /api/contracts
+  create: async (contract: FormData): Promise<ApiResponse<Contract>> => {
+    const { data } = await axios.post<ApiResponse<Contract>>('/contracts', contract, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return response.data.data || [];
+    return data;
   },
 
-  // Hợp đồng đã hết hạn
-  getExpired: async (): Promise<Contract[]> => {
-    const response = await axios.get<ApiResponse<Contract[]>>('/contracts/expired');
-    return response.data.data || [];
+  // PUT /api/contracts/:id
+  update: async (id: number, contract: FormData): Promise<ApiResponse<Contract>> => {
+    const { data } = await axios.put<ApiResponse<Contract>>(`/contracts/${id}`, contract, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
   },
 
-  // Thống kê hợp đồng theo loại
-  getStats: async (): Promise<any> => {
-    const response = await axios.get<ApiResponse>('/contracts/stats');
-    return response.data;
-  },
-
-  // Cập nhật hợp đồng
-  update: async (id: number, data: Partial<Contract>): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/contracts/${id}`, data);
-    return response.data;
-  },
-
-  // Xóa hợp đồng
+  // DELETE /api/contracts/:id
   delete: async (id: number): Promise<ApiResponse> => {
-    const response = await axios.delete<ApiResponse>(`/contracts/${id}`);
-    return response.data;
-  }
+    const { data } = await axios.delete<ApiResponse>(`/contracts/${id}`);
+    return data;
+  },
+
+  // GET /api/contracts/expiring?days=30
+  getExpiring: async (days: number = 30): Promise<ApiResponse<Contract[]>> => {
+    const { data } = await axios.get<ApiResponse<Contract[]>>('/contracts/expiring', {
+      params: { days },
+    });
+    return data;
+  },
+
+  // GET /api/contracts/expired
+  getExpired: async (): Promise<ApiResponse<Contract[]>> => {
+    const { data } = await axios.get<ApiResponse<Contract[]>>('/contracts/expired');
+    return data;
+  },
+
+  // GET /api/contracts/stats
+  getStats: async (): Promise<ApiResponse> => {
+    const { data } = await axios.get<ApiResponse>('/contracts/stats');
+    return data;
+  },
 };

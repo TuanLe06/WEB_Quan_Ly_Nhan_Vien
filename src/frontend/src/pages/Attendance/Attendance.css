@@ -1,0 +1,108 @@
+.checkinout-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.checkinout-header {
+  margin-bottom: 40px;
+}
+
+.clock-icon {
+  color: var(--primary);
+  margin-bottom: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.current-time {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.current-date {
+  font-size: 18px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.checkinout-message {
+  padding: 16px;
+  border-radius: var(--radius);
+  margin-bottom: 32px;
+  font-weight: 500;
+  animation: slideInDown 0.3s ease-out;
+}
+
+.checkinout-message.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.checkinout-message.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.checkinout-info {
+  background: var(--light);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 32px;
+}
+
+.checkinout-info .info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.checkinout-info .info-item:last-child {
+  border-bottom: none;
+}
+
+.checkinout-info .info-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.checkinout-info .info-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.checkinout-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.checkinout-actions button {
+  flex: 1;
+}

@@ -1,61 +1,40 @@
 import axios from './axiosConfig';
-import { Leave, LeaveFormData, ApiResponse } from '../types';
+import { Leave, LeaveFormData, ApiResponse, PaginatedResponse, PaginationParams } from '../types';
 
 export const leaveApi = {
-  // Gửi yêu cầu nghỉ phép
-  create: async (data: LeaveFormData): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/leave', data);
-    return response.data;
+  // GET /api/leave
+  getAll: async (params?: PaginationParams): Promise<PaginatedResponse<Leave[]>> => {
+    const { data } = await axios.get<PaginatedResponse<Leave[]>>('/leave', { params });
+    return data;
   },
 
-  // Lấy danh sách yêu cầu nghỉ phép
-  getAll: async (params?: {
-    trang_thai?: string;
-    ma_nv?: string;
-    ma_phong?: string;
-  }): Promise<Leave[]> => {
-    const response = await axios.get<ApiResponse<Leave[]>>('/leave', { params });
-    return response.data.data || [];
+  // GET /api/leave/:id
+  getById: async (id: number): Promise<ApiResponse<Leave>> => {
+    const { data } = await axios.get<ApiResponse<Leave>>(`/leave/${id}`);
+    return data;
   },
 
-  // Lấy chi tiết yêu cầu nghỉ phép
-  getById: async (id: number): Promise<Leave> => {
-    const response = await axios.get<ApiResponse<Leave>>(`/leave/${id}`);
-    return response.data.data!;
+  // POST /api/leave
+  create: async (leave: LeaveFormData): Promise<ApiResponse<Leave>> => {
+    const { data } = await axios.post<ApiResponse<Leave>>('/leave', leave);
+    return data;
   },
 
-  // Ai đang nghỉ phép hôm nay
-  getToday: async (): Promise<Leave[]> => {
-    const response = await axios.get<ApiResponse<Leave[]>>('/leave/today');
-    return response.data.data || [];
+  // PUT /api/leave/:id/status
+  updateStatus: async (id: number, trang_thai: 'Đã duyệt' | 'Từ chối'): Promise<ApiResponse> => {
+    const { data } = await axios.put<ApiResponse>(`/leave/${id}/status`, { trang_thai });
+    return data;
   },
 
-  // Thống kê nghỉ phép
-  getStats: async (nam: number): Promise<any[]> => {
-    const response = await axios.get<ApiResponse>('/leave/stats', {
-      params: { nam }
-    });
-    return response.data.data || [];
+  // GET /api/leave/today
+  getToday: async (): Promise<ApiResponse<Leave[]>> => {
+    const { data } = await axios.get<ApiResponse<Leave[]>>('/leave/today');
+    return data;
   },
 
-  // Duyệt/Từ chối yêu cầu
-  updateStatus: async (id: number, trang_thai: string, ghi_chu?: string): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/leave/${id}/status`, {
-      trang_thai,
-      ghi_chu
-    });
-    return response.data;
+  // GET /api/leave/stats
+  getStats: async (params?: any): Promise<ApiResponse> => {
+    const { data } = await axios.get<ApiResponse>('/leave/stats', { params });
+    return data;
   },
-
-  // Cập nhật yêu cầu nghỉ phép (trước khi duyệt)
-  update: async (id: number, data: Partial<LeaveFormData>): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/leave/${id}`, data);
-    return response.data;
-  },
-
-  // Xóa yêu cầu nghỉ phép
-  delete: async (id: number): Promise<ApiResponse> => {
-    const response = await axios.delete<ApiResponse>(`/leave/${id}`);
-    return response.data;
-  }
 };

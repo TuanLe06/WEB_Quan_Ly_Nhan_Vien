@@ -1,60 +1,61 @@
 import axios from './axiosConfig';
-import { Salary, ApiResponse } from '../types';
+import { Salary, ApiResponse, PaginatedResponse } from '../types';
 
 export const salaryApi = {
-  // Tính lương cho một nhân viên
-  calculate: async (ma_nv: string, thang: number, nam: number): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/salary/calculate', { ma_nv, thang, nam });
-    return response.data;
+  // POST /api/salary/calculate
+  calculateOne: async (ma_nv: string, thang: number, nam: number): Promise<ApiResponse<Salary>> => {
+    const { data } = await axios.post<ApiResponse<Salary>>('/salary/calculate', {
+      ma_nv,
+      thang,
+      nam,
+    });
+    return data;
   },
 
-  // Tính lương cho tất cả nhân viên
+  // POST /api/salary/calculate-all
   calculateAll: async (thang: number, nam: number): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/salary/calculate-all', { thang, nam });
-    return response.data;
-  },
-
-  // Xem bảng lương tháng
-  getMonthly: async (thang: number, nam: number, ma_phong?: string): Promise<Salary[]> => {
-    const response = await axios.get<ApiResponse<Salary[]>>('/salary/monthly', {
-      params: { thang, nam, ma_phong }
+    const { data } = await axios.post<ApiResponse>('/salary/calculate-all', {
+      thang,
+      nam,
     });
-    return response.data.data || [];
+    return data;
   },
 
-  // Xem chi tiết lương của nhân viên
-  getByEmployee: async (ma_nv: string, params?: { thang?: number; nam?: number }): Promise<Salary[]> => {
-    const response = await axios.get<ApiResponse<Salary[]>>(`/salary/employee/${ma_nv}`, { params });
-    return response.data.data || [];
-  },
-
-  // Top nhân viên lương cao nhất
-  getTop: async (thang: number, nam: number, limit: number = 10): Promise<Salary[]> => {
-    const response = await axios.get<ApiResponse<Salary[]>>('/salary/top', {
-      params: { thang, nam, limit }
+  // GET /api/salary/monthly?thang=1&nam=2024
+  getMonthly: async (thang: number, nam: number): Promise<ApiResponse<Salary[]>> => {
+    const { data } = await axios.get<ApiResponse<Salary[]>>('/salary/monthly', {
+      params: { thang, nam },
     });
-    return response.data.data || [];
+    return data;
   },
 
-  // Tổng quỹ lương theo phòng ban
-  getByDepartment: async (thang: number, nam: number): Promise<any[]> => {
-    const response = await axios.get<ApiResponse>('/salary/by-department', {
-      params: { thang, nam }
+  // GET /api/salary/employee/:ma_nv
+  getByEmployee: async (ma_nv: string, params?: any): Promise<ApiResponse<Salary[]>> => {
+    const { data } = await axios.get<ApiResponse<Salary[]>>(`/salary/employee/${ma_nv}`, { params });
+    return data;
+  },
+
+  // GET /api/salary/top?limit=10
+  getTop: async (limit: number = 10): Promise<ApiResponse<Salary[]>> => {
+    const { data } = await axios.get<ApiResponse<Salary[]>>('/salary/top', {
+      params: { limit },
     });
-    return response.data.data || [];
+    return data;
   },
 
-  // So sánh lương theo tháng
-  compare: async (nam: number, soThang: number = 6): Promise<any[]> => {
-    const response = await axios.get<ApiResponse>('/salary/compare', {
-      params: { nam, soThang }
+  // GET /api/salary/by-department
+  getByDepartment: async (thang: number, nam: number): Promise<ApiResponse> => {
+    const { data } = await axios.get<ApiResponse>('/salary/by-department', {
+      params: { thang, nam },
     });
-    return response.data.data || [];
+    return data;
   },
 
-  // Xóa bảng lương (Admin)
-  delete: async (id: number): Promise<ApiResponse> => {
-    const response = await axios.delete<ApiResponse>(`/salary/${id}`);
-    return response.data;
-  }
+  // GET /api/salary/compare
+  compare: async (thang1: number, nam1: number, thang2: number, nam2: number): Promise<ApiResponse> => {
+    const { data } = await axios.get<ApiResponse>('/salary/compare', {
+      params: { thang1, nam1, thang2, nam2 },
+    });
+    return data;
+  },
 };

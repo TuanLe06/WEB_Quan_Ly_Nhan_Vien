@@ -1,50 +1,40 @@
 import axios from './axiosConfig';
-import { Employee, EmployeeFormData, ApiResponse } from '../types';
+import { Employee, EmployeeFormData, ApiResponse, PaginatedResponse, PaginationParams } from '../types';
 
 export const employeeApi = {
-  // Lấy danh sách nhân viên
-  getAll: async (params?: {
-    trang_thai?: number;
-    ma_phong?: string;
-    keyword?: string;
-  }): Promise<Employee[]> => {
-    const response = await axios.get<ApiResponse<Employee[]>>('/employees', { params });
-    return response.data.data || [];
+  // GET /api/employees
+  getAll: async (params?: PaginationParams): Promise<PaginatedResponse<Employee[]>> => {
+    const { data } = await axios.get<PaginatedResponse<Employee[]>>('/employees', { params });
+    return data;
   },
 
-  // Lấy thông tin chi tiết nhân viên
-  getById: async (id: string): Promise<Employee> => {
-    const response = await axios.get<ApiResponse<Employee>>(`/employees/${id}`);
-    return response.data.data!;
+  // GET /api/employees/:id
+  getById: async (ma_nv: string): Promise<ApiResponse<Employee>> => {
+    const { data } = await axios.get<ApiResponse<Employee>>(`/employees/${ma_nv}`);
+    return data;
   },
 
-  // Thêm nhân viên mới
-  create: async (data: EmployeeFormData): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/employees', data);
-    return response.data;
+  // POST /api/employees
+  create: async (employee: EmployeeFormData): Promise<ApiResponse<Employee>> => {
+    const { data } = await axios.post<ApiResponse<Employee>>('/employees', employee);
+    return data;
   },
 
-  // Cập nhật nhân viên
-  update: async (id: string, data: Partial<EmployeeFormData>): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/employees/${id}`, data);
-    return response.data;
+  // PUT /api/employees/:id
+  update: async (ma_nv: string, employee: Partial<EmployeeFormData>): Promise<ApiResponse<Employee>> => {
+    const { data } = await axios.put<ApiResponse<Employee>>(`/employees/${ma_nv}`, employee);
+    return data;
   },
 
-  // Xóa nhân viên (soft delete)
-  delete: async (id: string): Promise<ApiResponse> => {
-    const response = await axios.delete<ApiResponse>(`/employees/${id}`);
-    return response.data;
+  // DELETE /api/employees/:id
+  delete: async (ma_nv: string): Promise<ApiResponse> => {
+    const { data } = await axios.delete<ApiResponse>(`/employees/${ma_nv}`);
+    return data;
   },
 
-  // Khôi phục nhân viên
-  restore: async (id: string): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/employees/${id}/restore`);
-    return response.data;
+  // GET /api/employees/stats
+  getStats: async (): Promise<ApiResponse> => {
+    const { data } = await axios.get<ApiResponse>('/employees/stats');
+    return data;
   },
-
-  // Thống kê nhân viên
-  getStats: async (): Promise<any> => {
-    const response = await axios.get<ApiResponse>('/employees/stats');
-    return response.data.data;
-  }
 };

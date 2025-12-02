@@ -2,30 +2,32 @@ import axios from './axiosConfig';
 import { LoginCredentials, AuthResponse, User } from '../types';
 
 export const authApi = {
-  // Đăng nhập
+  // POST /api/auth/login
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await axios.post<AuthResponse>('/auth/login', credentials);
-    return response.data;
+    const { data } = await axios.post<AuthResponse>('/auth/login', credentials);
+    return data;
   },
 
-  // Đăng ký (Admin only)
+  // POST /api/auth/register (Admin only)
   register: async (userData: any): Promise<AuthResponse> => {
-    const response = await axios.post<AuthResponse>('/auth/register', userData);
-    return response.data;
+    const { data } = await axios.post<AuthResponse>('/auth/register', userData);
+    return data;
   },
 
-  // Đổi mật khẩu
-  changePassword: async (oldPassword: string, newPassword: string): Promise<AuthResponse> => {
-    const response = await axios.put<AuthResponse>('/auth/change-password', {
-      oldPassword,
-      newPassword
-    });
-    return response.data;
+  // GET /api/auth/me
+  getCurrentUser: async (): Promise<User> => {
+    const { data } = await axios.get<{ success: boolean; user: User }>('/auth/me');
+    return data.user;
   },
 
-  // Lấy thông tin user hiện tại
-  getMe: async (): Promise<User> => {
-    const response = await axios.get<{ user: User }>('/auth/me');
-    return response.data.user;
-  }
+  // PUT /api/auth/change-password
+  changePassword: async (passwords: { currentPassword: string; newPassword: string }) => {
+    const { data } = await axios.put('/auth/change-password', passwords);
+    return data;
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
 };

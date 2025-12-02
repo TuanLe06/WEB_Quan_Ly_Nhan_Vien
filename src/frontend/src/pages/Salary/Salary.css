@@ -1,0 +1,27 @@
+.salary-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.salary-filters {
+  display: flex;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .salary-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .salary-filters {
+    width: 100%;
+  }
+  
+  .salary-filters select {
+    flex: 1;
+  }
+}

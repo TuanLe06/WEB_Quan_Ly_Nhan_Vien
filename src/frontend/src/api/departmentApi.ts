@@ -2,33 +2,33 @@ import axios from './axiosConfig';
 import { Department, ApiResponse } from '../types';
 
 export const departmentApi = {
-  // Lấy danh sách phòng ban
-  getAll: async (params?: { trang_thai?: number }): Promise<Department[]> => {
-    const response = await axios.get<ApiResponse<Department[]>>('/departments', { params });
-    return response.data.data || [];
+  // GET /api/departments
+  getAll: async (): Promise<ApiResponse<Department[]>> => {
+    const { data } = await axios.get<ApiResponse<Department[]>>('/departments');
+    return data;
   },
 
-  // Lấy thông tin chi tiết phòng ban
-  getById: async (id: string): Promise<Department> => {
-    const response = await axios.get<ApiResponse<Department>>(`/departments/${id}`);
-    return response.data.data!;
+  // GET /api/departments/:id
+  getById: async (ma_phong: string): Promise<ApiResponse<Department>> => {
+    const { data } = await axios.get<ApiResponse<Department>>(`/departments/${ma_phong}`);
+    return data;
   },
 
-  // Thêm phòng ban mới
-  create: async (data: Omit<Department, 'so_nhan_vien'>): Promise<ApiResponse> => {
-    const response = await axios.post<ApiResponse>('/departments', data);
-    return response.data;
+  // POST /api/departments
+  create: async (department: Omit<Department, 'so_nhan_vien'>): Promise<ApiResponse<Department>> => {
+    const { data } = await axios.post<ApiResponse<Department>>('/departments', department);
+    return data;
   },
 
-  // Cập nhật phòng ban
-  update: async (id: string, data: Partial<Department>): Promise<ApiResponse> => {
-    const response = await axios.put<ApiResponse>(`/departments/${id}`, data);
-    return response.data;
+  // PUT /api/departments/:id
+  update: async (ma_phong: string, department: Partial<Department>): Promise<ApiResponse<Department>> => {
+    const { data } = await axios.put<ApiResponse<Department>>(`/departments/${ma_phong}`, department);
+    return data;
   },
 
-  // Xóa phòng ban
-  delete: async (id: string): Promise<ApiResponse> => {
-    const response = await axios.delete<ApiResponse>(`/departments/${id}`);
-    return response.data;
-  }
+  // DELETE /api/departments/:id
+  delete: async (ma_phong: string): Promise<ApiResponse> => {
+    const { data } = await axios.delete<ApiResponse>(`/departments/${ma_phong}`);
+    return data;
+  },
 };
