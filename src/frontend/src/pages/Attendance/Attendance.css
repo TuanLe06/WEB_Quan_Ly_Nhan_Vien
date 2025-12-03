@@ -223,7 +223,7 @@
 }
 
 /* ============================================ */
-/* STATUS BADGES */
+/* STATUS BADGES - UPDATED */
 /* ============================================ */
 .status-badge {
   display: inline-flex;
@@ -235,23 +235,37 @@
   white-space: nowrap;
 }
 
-.status-đúng-giờ,
-.status-đủ-giờ {
+/* Trạng thái check-in: Đúng giờ */
+.status-đúng-giờ {
   background: rgba(16, 185, 129, 0.1);
   color: var(--success);
 }
 
-.status-chưa-checkout,
-.status-thiếu-giờ {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--warning);
-}
-
+/* Trạng thái check-in: Muộn */
 .status-muộn {
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
 }
 
+/* Trạng thái làm việc: Đủ giờ */
+.status-đủ-giờ {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+/* Trạng thái làm việc: Thiếu giờ */
+.status-thiếu-giờ {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+/* Trạng thái làm việc: Chưa checkout */
+.status-chưa-checkout {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+/* Generic status colors */
 .status-success {
   background: rgba(16, 185, 129, 0.1);
   color: var(--success);
@@ -265,6 +279,11 @@
 .status-danger {
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
+}
+
+.status-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }
 
 /* ============================================ */

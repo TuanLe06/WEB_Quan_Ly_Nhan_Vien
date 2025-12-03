@@ -30,6 +30,33 @@ const CheckInOut: React.FC = () => {
     checkTodayStatus();
   }, []);
 
+  // Helper function to format time from "HH:MM:SS" to display format
+  const formatTimeDisplay = (timeString: string) => {
+    if (!timeString) return '';
+    // timeString is in format "HH:MM:SS"
+    const parts = timeString.split(':');
+    if (parts.length >= 2) {
+      return `${parts[0]}:${parts[1]}`;
+    }
+    return timeString;
+  };
+
+  // Helper to get today's date in YYYY-MM-DD format (local timezone)
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper to compare dates (ignoring time)
+  const isSameDate = (dateString: string, targetDate: string) => {
+    // dateString might be "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS"
+    const date1 = dateString.split('T')[0];
+    return date1 === targetDate;
+  };
+
   const checkTodayStatus = async () => {
     if (!user?.ma_nv) return;
     
@@ -41,10 +68,14 @@ const CheckInOut: React.FC = () => {
       });
       
       if (response.success && response.data) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDateString();
         const todayRecord = response.data.find((record: any) => 
-          record.ngay_lam.split('T')[0] === today
+          isSameDate(record.ngay_lam, today)
         );
+        
+        console.log('Today:', today);
+        console.log('Found record:', todayRecord);
+        
         setTodayAttendance(todayRecord || null);
       }
     } catch (error) {
@@ -69,18 +100,22 @@ const CheckInOut: React.FC = () => {
 
     try {
       setLoading(true);
+      setMessage('');
       const response = await attendanceApi.checkIn(user.ma_nv);
       if (response.success) {
         setMessage('Check-in thành công! ✓');
         setMessageType('success');
+        // Refresh status immediately
         await checkTodayStatus();
         setTimeout(() => {
           setMessage('');
         }, 3000);
       }
     } catch (error: any) {
-      setMessage(error.response?.data?.message || 'Check-in thất bại!');
+      const errorMsg = error.response?.data?.message || 'Check-in thất bại!';
+      setMessage(errorMsg);
       setMessageType('error');
+      console.error('Check-in error:', error);
     } finally {
       setLoading(false);
     }
@@ -107,18 +142,22 @@ const CheckInOut: React.FC = () => {
 
     try {
       setLoading(true);
+      setMessage('');
       const response = await attendanceApi.checkOut(user.ma_nv);
       if (response.success) {
         setMessage('Check-out thành công! ✓');
         setMessageType('success');
+        // Refresh status immediately
         await checkTodayStatus();
         setTimeout(() => {
           navigate('/attendance');
         }, 2000);
       }
     } catch (error: any) {
-      setMessage(error.response?.data?.message || 'Check-out thất bại!');
+      const errorMsg = error.response?.data?.message || 'Check-out thất bại!';
+      setMessage(errorMsg);
       setMessageType('error');
+      console.error('Check-out error:', error);
     } finally {
       setLoading(false);
     }
@@ -152,6 +191,18 @@ const CheckInOut: React.FC = () => {
     const hour = currentTime.getHours();
     const minute = currentTime.getMinutes();
     return hour > 8 || (hour === 8 && minute > 15);
+  };
+
+  // Check if checkout button should be disabled
+  const isCheckoutDisabled = () => {
+    if (!todayAttendance) return true; // No check-in yet
+    if (todayAttendance.gio_ra) return true; // Already checked out
+    return false;
+  };
+
+  // Check if checkin button should be disabled
+  const isCheckinDisabled = () => {
+    return !!todayAttendance; // Already checked in
   };
 
   return (
@@ -199,17 +250,23 @@ const CheckInOut: React.FC = () => {
                     <div className="status-details">
                       <div className="status-item">
                         <span className="status-label">Giờ vào:</span>
-                        <span className="status-value">{todayAttendance.gio_vao}</span>
+                        <span className="status-value">
+                          {formatTimeDisplay(todayAttendance.gio_vao)}
+                        </span>
                       </div>
                       {todayAttendance.gio_ra ? (
                         <>
                           <div className="status-item">
                             <span className="status-label">Giờ ra:</span>
-                            <span className="status-value">{todayAttendance.gio_ra}</span>
+                            <span className="status-value">
+                              {formatTimeDisplay(todayAttendance.gio_ra)}
+                            </span>
                           </div>
                           <div className="status-item">
                             <span className="status-label">Số giờ:</span>
-                            <span className="status-value success">{todayAttendance.so_gio.toFixed(1)}h</span>
+                            <span className="status-value success">
+                              {Number(todayAttendance.so_gio).toFixed(1)}h
+                            </span>
                           </div>
                         </>
                       ) : (
@@ -233,6 +290,16 @@ const CheckInOut: React.FC = () => {
             </div>
           )}
 
+          {checkingStatus && (
+            <div className="checkinout-status">
+              <div className="status-card">
+                <div className="status-content">
+                  <div className="status-title">Đang kiểm tra trạng thái...</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* User Info */}
           <div className="checkinout-info">
             <div className="info-item">
@@ -245,7 +312,7 @@ const CheckInOut: React.FC = () => {
             </div>
             <div className="info-item">
               <span className="info-label">Phòng ban:</span>
-              <span className="info-value">{user?.ma_phong || 'Chưa có'}</span>
+              <span className="info-value">{user?.ten_phong || 'Chưa có'}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Chức vụ:</span>
@@ -260,7 +327,7 @@ const CheckInOut: React.FC = () => {
               size="lg"
               onClick={handleCheckIn}
               loading={loading}
-              disabled={!!todayAttendance}
+              disabled={isCheckinDisabled() || checkingStatus}
               icon={
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -275,7 +342,7 @@ const CheckInOut: React.FC = () => {
               size="lg"
               onClick={handleCheckOut}
               loading={loading}
-              disabled={!todayAttendance || !!todayAttendance?.gio_ra}
+              disabled={isCheckoutDisabled() || checkingStatus}
               icon={
                 <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

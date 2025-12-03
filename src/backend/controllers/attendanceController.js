@@ -42,10 +42,15 @@ exports.checkIn = async (req, res) => {
       });
     }
 
-    // Check-in
+    // Xác định trạng thái: Muộn nếu sau 8:15, Đúng giờ nếu trước đó
+    const [hours, minutes] = gio_vao.split(':').map(Number);
+    const isLate = hours > 8 || (hours === 8 && minutes > 15);
+    const trang_thai = isLate ? 'Muộn' : 'Đúng giờ';
+
+    // Check-in với trạng thái
     await db.query(
-      'INSERT INTO CHAMCONG (ma_nv, ngay_lam, gio_vao, so_gio) VALUES (?, ?, ?, 0)',
-      [ma_nv, ngay_lam, gio_vao]
+      'INSERT INTO CHAMCONG (ma_nv, ngay_lam, gio_vao, so_gio, trang_thai) VALUES (?, ?, ?, 0, ?)',
+      [ma_nv, ngay_lam, gio_vao, trang_thai]
     );
 
     res.json({ 
@@ -54,7 +59,8 @@ exports.checkIn = async (req, res) => {
       data: {
         ma_nv,
         ngay_lam,
-        gio_vao
+        gio_vao,
+        trang_thai
       }
     });
   } catch (error) {
@@ -96,6 +102,7 @@ exports.checkOut = async (req, res) => {
     }
 
     // Check-out và tính số giờ làm
+    // Giữ nguyên trạng thái "Muộn" nếu đã muộn, không thay đổi
     const [result] = await db.query(`
       UPDATE CHAMCONG 
       SET gio_ra = ?,
@@ -185,7 +192,7 @@ exports.getTodayAttendance = async (req, res) => {
           WHEN cc.gio_ra IS NULL THEN 'Chưa checkout'
           WHEN cc.so_gio >= 8 THEN 'Đủ giờ'
           ELSE 'Thiếu giờ'
-        END as trang_thai
+        END as trang_thai_lam_viec
       FROM CHAMCONG cc
       JOIN NHANVIEN nv ON cc.ma_nv = nv.ma_nv
       JOIN PHONGBAN pb ON nv.ma_phong = pb.ma_phong
@@ -263,7 +270,6 @@ exports.getMonthlyStats = async (req, res) => {
 exports.getLateEmployees = async (req, res) => {
   try {
     const { thang, nam } = req.query;
-    const gioVaoChuan = '08:15:00';
 
     let query = `
       SELECT 
@@ -272,13 +278,14 @@ exports.getLateEmployees = async (req, res) => {
         nv.ten_nv,
         pb.ten_phong,
         cc.gio_vao,
-        TIMEDIFF(cc.gio_vao, '08:00:00') as tre_phut
+        cc.trang_thai,
+        TIMEDIFF(cc.gio_vao, '08:15:00') as tre_phut
       FROM CHAMCONG cc
       JOIN NHANVIEN nv ON cc.ma_nv = nv.ma_nv
       JOIN PHONGBAN pb ON nv.ma_phong = pb.ma_phong
-      WHERE cc.gio_vao > ?
+      WHERE cc.trang_thai = 'Muộn'
     `;
-    const params = [gioVaoChuan];
+    const params = [];
 
     if (thang && nam) {
       query += ' AND MONTH(cc.ngay_lam) = ? AND YEAR(cc.ngay_lam) = ?';
@@ -316,6 +323,7 @@ exports.getNotCheckedOut = async (req, res) => {
         pb.ten_phong,
         cc.ngay_lam,
         cc.gio_vao,
+        cc.trang_thai,
         TIMEDIFF(CURTIME(), cc.gio_vao) as da_lam
       FROM CHAMCONG cc
       JOIN NHANVIEN nv ON cc.ma_nv = nv.ma_nv
@@ -354,17 +362,26 @@ exports.updateAttendance = async (req, res) => {
       });
     }
 
+    // Xác định trạng thái dựa trên giờ vào mới
+    let trang_thai = existing[0].trang_thai; // Giữ nguyên nếu không thay đổi gio_vao
+    if (gio_vao) {
+      const [hours, minutes] = gio_vao.split(':').map(Number);
+      const isLate = hours > 8 || (hours === 8 && minutes > 15);
+      trang_thai = isLate ? 'Muộn' : 'Đúng giờ';
+    }
+
     // Cập nhật
     await db.query(`
       UPDATE CHAMCONG 
       SET gio_vao = ?, 
           gio_ra = ?,
+          trang_thai = ?,
           so_gio = CASE 
             WHEN ? IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, ?, ?) / 60
             ELSE 0 
           END
       WHERE id = ?
-    `, [gio_vao, gio_ra, gio_ra, gio_vao, gio_ra, id]);
+    `, [gio_vao, gio_ra, trang_thai, gio_ra, gio_vao, gio_ra, id]);
 
     res.json({ 
       success: true,

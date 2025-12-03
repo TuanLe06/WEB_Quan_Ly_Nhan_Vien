@@ -19,9 +19,38 @@ const AttendanceList: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
+  // Load counts for all tabs on mount
+  useEffect(() => {
+    loadAllCounts();
+  }, []);
+
+  // Load data when tab or filters change
   useEffect(() => {
     loadData();
   }, [activeTab, selectedMonth, selectedYear]);
+
+  const loadAllCounts = async () => {
+    try {
+      // Load counts for badge display
+      const [todayRes, lateRes, notCheckedRes] = await Promise.all([
+        attendanceApi.getToday(),
+        attendanceApi.getLate(),
+        attendanceApi.getNotCheckedOut(),
+      ]);
+
+      if (todayRes.success && todayRes.data) {
+        setAttendances(todayRes.data);
+      }
+      if (lateRes.success && lateRes.data) {
+        setLateEmployees(lateRes.data);
+      }
+      if (notCheckedRes.success && notCheckedRes.data) {
+        setNotCheckedOut(notCheckedRes.data);
+      }
+    } catch (error) {
+      console.error('Failed to load counts:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -32,7 +61,10 @@ const AttendanceList: React.FC = () => {
           setAttendances(response.data);
         }
       } else if (activeTab === 'late') {
-        const response = await attendanceApi.getLate();
+        const response = await attendanceApi.getLate({
+          thang: selectedMonth,
+          nam: selectedYear
+        });
         if (response.success && response.data) {
           setLateEmployees(response.data);
         }
@@ -54,6 +86,25 @@ const AttendanceList: React.FC = () => {
       console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper để hiển thị trạng thái check-in (Muộn/Đúng giờ)
+  const getCheckInStatus = (trang_thai: string) => {
+    if (trang_thai === 'Muộn') {
+      return <span className="status-badge status-muộn">Muộn</span>;
+    }
+    return <span className="status-badge status-đúng-giờ">Đúng giờ</span>;
+  };
+
+  // Helper để hiển thị trạng thái làm việc (Đủ giờ/Thiếu giờ/Chưa checkout)
+  const getWorkStatus = (trang_thai_lam_viec: string) => {
+    if (trang_thai_lam_viec === 'Chưa checkout') {
+      return <span className="status-badge status-chưa-checkout">Chưa checkout</span>;
+    } else if (trang_thai_lam_viec === 'Đủ giờ') {
+      return <span className="status-badge status-đủ-giờ">Đủ giờ</span>;
+    } else {
+      return <span className="status-badge status-thiếu-giờ">Thiếu giờ</span>;
     }
   };
 
@@ -88,42 +139,108 @@ const AttendanceList: React.FC = () => {
     },
     {
       key: 'trang_thai',
-      title: 'Trạng thái',
+      title: 'Check-in',
       width: '120px',
       align: 'center' as const,
-      render: (value: string) => (
-        <span className={`status-badge status-${value?.toLowerCase().replace(' ', '-')}`}>
-          {value || 'Đúng giờ'}
-        </span>
-      ),
+      render: (value: string) => getCheckInStatus(value),
+    },
+    {
+      key: 'trang_thai_lam_viec',
+      title: 'Làm việc',
+      width: '130px',
+      align: 'center' as const,
+      render: (value: string) => getWorkStatus(value),
     },
   ];
 
   const lateColumns = [
-    { key: 'ngay_lam', title: 'Ngày', width: '120px', render: (value: string) => formatDate(value) },
+    { 
+      key: 'ngay_lam', 
+      title: 'Ngày', 
+      width: '120px', 
+      render: (value: string) => formatDate(value) 
+    },
     { key: 'ma_nv', title: 'Mã NV', width: '100px' },
     { key: 'ten_nv', title: 'Họ tên' },
     { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
-    { key: 'gio_vao', title: 'Giờ vào', width: '100px', align: 'center' as const, render: (value: string) => <span className="text-danger">{formatTime(value)}</span> },
-    { key: 'tre_phut', title: 'Trễ', width: '100px', align: 'center' as const, render: (value: string) => <span className="text-danger">{value}</span> },
+    { 
+      key: 'gio_vao', 
+      title: 'Giờ vào', 
+      width: '100px', 
+      align: 'center' as const, 
+      render: (value: string) => <span className="text-danger">{formatTime(value)}</span> 
+    },
+    { 
+      key: 'tre_phut', 
+      title: 'Trễ', 
+      width: '100px', 
+      align: 'center' as const, 
+      render: (value: string) => <span className="text-danger">{value}</span> 
+    },
   ];
 
   const notCheckedColumns = [
     { key: 'ma_nv', title: 'Mã NV', width: '100px' },
     { key: 'ten_nv', title: 'Họ tên' },
     { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
-    { key: 'gio_vao', title: 'Giờ check-in', width: '120px', align: 'center' as const, render: (value: string) => formatTime(value) },
-    { key: 'da_lam', title: 'Đã làm', width: '120px', align: 'center' as const, render: (value: string) => <span className="text-warning">{value}</span> },
+    { 
+      key: 'gio_vao', 
+      title: 'Giờ check-in', 
+      width: '120px', 
+      align: 'center' as const, 
+      render: (value: string) => formatTime(value) 
+    },
+    {
+      key: 'trang_thai',
+      title: 'Check-in',
+      width: '120px',
+      align: 'center' as const,
+      render: (value: string) => getCheckInStatus(value),
+    },
+    { 
+      key: 'da_lam', 
+      title: 'Đã làm', 
+      width: '120px', 
+      align: 'center' as const, 
+      render: (value: string) => <span className="text-warning">{value}</span> 
+    },
   ];
 
   const statsColumns = [
     { key: 'ma_nv', title: 'Mã NV', width: '100px' },
     { key: 'ten_nv', title: 'Họ tên' },
     { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
-    { key: 'so_ngay_lam', title: 'Số ngày', width: '100px', align: 'center' as const },
-    { key: 'tong_gio', title: 'Tổng giờ', width: '100px', align: 'center' as const, render: (value: number) => `${Math.round(value)}h` },
-    { key: 'gio_tb_ngay', title: 'TB/ngày', width: '100px', align: 'center' as const, render: (value: number) => `${value.toFixed(1)}h` },
-    { key: 'danh_gia', title: 'Đánh giá', width: '120px', align: 'center' as const, render: (value: string) => <span className={`status-badge status-${value === 'Đủ giờ' ? 'success' : 'warning'}`}>{value}</span> },
+    { 
+      key: 'so_ngay_lam', 
+      title: 'Số ngày', 
+      width: '100px', 
+      align: 'center' as const 
+    },
+    { 
+      key: 'tong_gio', 
+      title: 'Tổng giờ', 
+      width: '100px', 
+      align: 'center' as const, 
+      render: (value: number) => `${Math.round(value)}h` 
+    },
+    { 
+      key: 'gio_tb_ngay', 
+      title: 'TB/ngày', 
+      width: '100px', 
+      align: 'center' as const, 
+      render: (value: number) => `${value.toFixed(1)}h` 
+    },
+    { 
+      key: 'danh_gia', 
+      title: 'Đánh giá', 
+      width: '120px', 
+      align: 'center' as const, 
+      render: (value: string) => (
+        <span className={`status-badge status-${value === 'Đủ giờ' ? 'đủ-giờ' : 'thiếu-giờ'}`}>
+          {value}
+        </span>
+      ) 
+    },
   ];
 
   const renderTabContent = () => {
@@ -134,7 +251,19 @@ const AttendanceList: React.FC = () => {
       }
       case 'late': {
         const dataWithKey = lateEmployees.map(emp => ({ ...emp, key: `${emp.ma_nv}-${emp.ngay_lam}` }));
-        return <Table columns={lateColumns} data={dataWithKey} loading={loading} rowKey="key" emptyText="Không có nhân viên đi muộn" />;
+        return (
+          <div>
+            <div className="stats-filter">
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="input">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => <option key={month} value={month}>Tháng {month}</option>)}
+              </select>
+              <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="input">
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </div>
+            <Table columns={lateColumns} data={dataWithKey} loading={loading} rowKey="key" emptyText="Không có nhân viên đi muộn" />
+          </div>
+        );
       }
       case 'notchecked': {
         const dataWithKey = notCheckedOut.map(emp => ({ ...emp, key: emp.ma_nv }));

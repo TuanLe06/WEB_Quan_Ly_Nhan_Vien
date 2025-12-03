@@ -1,6 +1,6 @@
 -- ==========================================
 -- HỆ THỐNG QUẢN LÝ NHÂN VIÊN
--- Seed Data - Dữ liệu mẫu (FULL)
+-- Seed Data - Dữ liệu mẫu (UPDATED WITH STATUS)
 -- ==========================================
 
 USE QuanLyNhanVien;
@@ -65,26 +65,37 @@ INSERT INTO NGUOIDUNG (username, password, vai_tro, ma_nv) VALUES
 ('dvk', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'PITT0001');
 
 -- ==========================================
--- CHẤM CÔNG (Tháng hiện tại)
+-- CHẤM CÔNG (Tháng hiện tại) - WITH STATUS
 -- ==========================================
-INSERT INTO CHAMCONG (ma_nv, ngay_lam, gio_vao, gio_ra, so_gio) VALUES
--- Tuần 1
-('PDAT0001', CURDATE() - INTERVAL 20 DAY, '08:00:00', '17:00:00', 8),
-('PDAT0001', CURDATE() - INTERVAL 19 DAY, '08:15:00', '17:30:00', 8.25),
-('PDAT0001', CURDATE() - INTERVAL 18 DAY, '08:00:00', '17:00:00', 8),
-('PKTT0001', CURDATE() - INTERVAL 20 DAY, '08:05:00', '17:10:00', 8.08),
-('PKTT0001', CURDATE() - INTERVAL 19 DAY, '08:00:00', '18:00:00', 9),
-('PITN0001', CURDATE() - INTERVAL 20 DAY, '08:00:00', '17:00:00', 8),
-('PITN0001', CURDATE() - INTERVAL 19 DAY, '08:00:00', '17:00:00', 8),
+INSERT INTO CHAMCONG (ma_nv, ngay_lam, gio_vao, gio_ra, so_gio, trang_thai) VALUES
+-- Tuần 1 - Đúng giờ và đủ giờ
+('PDAT0001', CURDATE() - INTERVAL 20 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PDAT0001', CURDATE() - INTERVAL 19 DAY, '08:10:00', '17:30:00', 8.33, 'Đúng giờ'),
+('PDAT0001', CURDATE() - INTERVAL 18 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+
+-- Tuần 1 - Một số người muộn
+('PKTT0001', CURDATE() - INTERVAL 20 DAY, '08:05:00', '17:10:00', 8.08, 'Đúng giờ'),
+('PKTT0001', CURDATE() - INTERVAL 19 DAY, '08:20:00', '18:00:00', 9.67, 'Muộn'),
+('PITN0001', CURDATE() - INTERVAL 20 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PITN0001', CURDATE() - INTERVAL 19 DAY, '08:30:00', '17:00:00', 8.5, 'Muộn'),
 
 -- Tuần 2
-('PDAT0001', CURDATE() - INTERVAL 13 DAY, '08:00:00', '17:00:00', 8),
-('PKTT0001', CURDATE() - INTERVAL 13 DAY, '08:00:00', '17:00:00', 8),
-('PITN0001', CURDATE() - INTERVAL 13 DAY, '08:10:00', '17:15:00', 8.08),
+('PDAT0001', CURDATE() - INTERVAL 13 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PKTT0001', CURDATE() - INTERVAL 13 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PITN0001', CURDATE() - INTERVAL 13 DAY, '08:25:00', '17:15:00', 8.83, 'Muộn'),
+('PITN0002', CURDATE() - INTERVAL 13 DAY, '08:00:00', '16:30:00', 8.5, 'Đúng giờ'),
 
--- Hôm nay
-('PDAT0001', CURDATE(), '08:00:00', NULL, 0),
-('PKTT0001', CURDATE(), '08:05:00', NULL, 0);
+-- Tuần 3
+('PDAT0001', CURDATE() - INTERVAL 6 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PKTT0001', CURDATE() - INTERVAL 6 DAY, '08:16:00', '17:00:00', 8.73, 'Muộn'),
+('PITN0001', CURDATE() - INTERVAL 6 DAY, '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PKDN0001', CURDATE() - INTERVAL 6 DAY, '08:45:00', '17:30:00', 8.75, 'Muộn'),
+
+-- Hôm nay - Một số đã checkout, một số chưa
+('PDAT0001', CURDATE(), '08:00:00', '17:00:00', 8, 'Đúng giờ'),
+('PKTT0001', CURDATE(), '08:05:00', NULL, 0, 'Đúng giờ'),
+('PITN0001', CURDATE(), '08:20:00', NULL, 0, 'Muộn'),
+('PITN0002', CURDATE(), '08:00:00', '17:15:00', 8.25, 'Đúng giờ');
 
 -- ==========================================
 -- NGHỈ PHÉP
@@ -117,4 +128,8 @@ SELECT 'Tổng số nhân viên:', COUNT(*) FROM NHANVIEN
 UNION ALL
 SELECT 'Tổng số người dùng:', COUNT(*) FROM NGUOIDUNG
 UNION ALL
-SELECT 'Tổng số bản ghi chấm công:', COUNT(*) FROM CHAMCONG;
+SELECT 'Tổng số bản ghi chấm công:', COUNT(*) FROM CHAMCONG
+UNION ALL
+SELECT 'Số người đi muộn:', COUNT(*) FROM CHAMCONG WHERE trang_thai = 'Muộn'
+UNION ALL
+SELECT 'Số người đúng giờ:', COUNT(*) FROM CHAMCONG WHERE trang_thai = 'Đúng giờ';
