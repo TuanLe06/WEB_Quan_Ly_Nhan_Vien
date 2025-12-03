@@ -223,7 +223,7 @@
 }
 
 /* ============================================ */
-/* STATUS BADGES - UPDATED */
+/* STATUS BADGES - SIMPLIFIED */
 /* ============================================ */
 .status-badge {
   display: inline-flex;
@@ -235,118 +235,25 @@
   white-space: nowrap;
 }
 
-/* Trạng thái check-in: Đúng giờ */
-.status-đúng-giờ {
+/* Main status colors */
+.status-badge.status-success {
   background: rgba(16, 185, 129, 0.1);
   color: var(--success);
 }
 
-/* Trạng thái check-in: Muộn */
-.status-muộn {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
-}
-
-/* Trạng thái làm việc: Đủ giờ */
-.status-đủ-giờ {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-}
-
-/* Trạng thái làm việc: Thiếu giờ */
-.status-thiếu-giờ {
+.status-badge.status-warning {
   background: rgba(245, 158, 11, 0.1);
   color: var(--warning);
 }
 
-/* Trạng thái làm việc: Chưa checkout */
-.status-chưa-checkout {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-/* Generic status colors */
-.status-success {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-}
-
-.status-warning {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--warning);
-}
-
-.status-danger {
+.status-badge.status-danger {
   background: rgba(239, 68, 68, 0.1);
   color: var(--danger);
 }
 
-.status-info {
+.status-badge.status-info {
   background: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
-}
-
-/* ============================================ */
-/* RESPONSIVE */
-/* ============================================ */
-@media (max-width: 768px) {
-  .checkinout-container {
-    padding: 20px 10px;
-  }
-
-  .current-time {
-    font-size: 36px;
-  }
-
-  .current-date {
-    font-size: 16px;
-  }
-
-  .checkinout-actions {
-    flex-direction: column;
-  }
-
-  .checkinout-actions button {
-    width: 100%;
-  }
-
-  .tabs-header {
-    gap: 4px;
-  }
-
-  .tab-button {
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  .stats-filter {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .stats-filter select {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .current-time {
-    font-size: 32px;
-  }
-
-  .checkinout-info {
-    padding: 16px;
-  }
-
-  .tab-button {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-
-  .tab-button svg {
-    width: 14px;
-    height: 14px;
-  }
 }
 
 /* ============================================ */
@@ -460,8 +367,48 @@
   color: var(--warning);
 }
 
-/* Responsive cho status cards */
+/* ============================================ */
+/* RESPONSIVE */
+/* ============================================ */
 @media (max-width: 768px) {
+  .checkinout-container {
+    padding: 20px 10px;
+  }
+
+  .current-time {
+    font-size: 36px;
+  }
+
+  .current-date {
+    font-size: 16px;
+  }
+
+  .checkinout-actions {
+    flex-direction: column;
+  }
+
+  .checkinout-actions button {
+    width: 100%;
+  }
+
+  .tabs-header {
+    gap: 4px;
+  }
+
+  .tab-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .stats-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-filter select {
+    width: 100%;
+  }
+
   .greeting-text {
     font-size: 18px;
   }
@@ -484,5 +431,25 @@
     flex-direction: column;
     gap: 4px;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .current-time {
+    font-size: 32px;
+  }
+
+  .checkinout-info {
+    padding: 16px;
+  }
+
+  .tab-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .tab-button svg {
+    width: 14px;
+    height: 14px;
   }
 }

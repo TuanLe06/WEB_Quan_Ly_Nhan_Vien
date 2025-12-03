@@ -89,22 +89,37 @@ const AttendanceList: React.FC = () => {
     }
   };
 
+  // Normalize status text to handle different encodings
+  const normalizeStatus = (status: string): string => {
+    if (!status) return '';
+    // Handle both UTF-8 encoded and regular Vietnamese text
+    const normalized = status.trim().toLowerCase();
+    if (normalized.includes('mu') || normalized === 'muộn') return 'Muộn';
+    if (normalized.includes('ng gi') || normalized === 'đúng giờ') return 'Đúng giờ';
+    if (normalized.includes('ch') || normalized === 'đủ giờ') return 'Đủ giờ';
+    if (normalized.includes('thi') || normalized === 'thiếu giờ') return 'Thiếu giờ';
+    if (normalized.includes('ch') || normalized.includes('checkout')) return 'Chưa checkout';
+    return status;
+  };
+
   // Helper để hiển thị trạng thái check-in (Muộn/Đúng giờ)
   const getCheckInStatus = (trang_thai: string) => {
-    if (trang_thai === 'Muộn') {
-      return <span className="status-badge status-muộn">Muộn</span>;
+    const status = normalizeStatus(trang_thai);
+    if (status === 'Muộn') {
+      return <span className="status-badge status-danger">Muộn</span>;
     }
-    return <span className="status-badge status-đúng-giờ">Đúng giờ</span>;
+    return <span className="status-badge status-success">Đúng giờ</span>;
   };
 
   // Helper để hiển thị trạng thái làm việc (Đủ giờ/Thiếu giờ/Chưa checkout)
   const getWorkStatus = (trang_thai_lam_viec: string) => {
-    if (trang_thai_lam_viec === 'Chưa checkout') {
-      return <span className="status-badge status-chưa-checkout">Chưa checkout</span>;
-    } else if (trang_thai_lam_viec === 'Đủ giờ') {
-      return <span className="status-badge status-đủ-giờ">Đủ giờ</span>;
+    const status = normalizeStatus(trang_thai_lam_viec);
+    if (status === 'Chưa checkout') {
+      return <span className="status-badge status-info">Chưa checkout</span>;
+    } else if (status === 'Đủ giờ') {
+      return <span className="status-badge status-success">Đủ giờ</span>;
     } else {
-      return <span className="status-badge status-thiếu-giờ">Thiếu giờ</span>;
+      return <span className="status-badge status-warning">Thiếu giờ</span>;
     }
   };
 
@@ -117,25 +132,29 @@ const AttendanceList: React.FC = () => {
       title: 'Giờ vào',
       width: '100px',
       align: 'center' as const,
-      render: (value: string) => (
-        <span className={value > '08:15:00' ? 'text-danger' : 'text-success'}>
-          {formatTime(value)}
-        </span>
-      ),
+      render: (value: string, record: any) => {
+        const isLate = normalizeStatus(record.trang_thai) === 'Muộn';
+        return (
+          <span className={isLate ? 'text-danger' : 'text-success'}>
+            {formatTime(value)}
+          </span>
+        );
+      },
     },
     {
       key: 'gio_ra',
       title: 'Giờ ra',
       width: '100px',
       align: 'center' as const,
-      render: (value: string | null) => value ? formatTime(value) : <span className="text-warning">Chưa checkout</span>,
+      render: (value: string | null) => 
+        value ? formatTime(value) : <span className="text-warning">Chưa checkout</span>,
     },
     {
       key: 'so_gio',
       title: 'Số giờ',
       width: '100px',
       align: 'center' as const,
-      render: (value: number) => `${value.toFixed(1)}h`,
+      render: (value: number) => `${value ? value.toFixed(1) : '0.0'}h`,
     },
     {
       key: 'trang_thai',
@@ -175,7 +194,7 @@ const AttendanceList: React.FC = () => {
       title: 'Trễ', 
       width: '100px', 
       align: 'center' as const, 
-      render: (value: string) => <span className="text-danger">{value}</span> 
+      render: (value: string) => <span className="text-danger">{value || 'N/A'}</span> 
     },
   ];
 
@@ -202,7 +221,7 @@ const AttendanceList: React.FC = () => {
       title: 'Đã làm', 
       width: '120px', 
       align: 'center' as const, 
-      render: (value: string) => <span className="text-warning">{value}</span> 
+      render: (value: string) => <span className="text-warning">{value || 'N/A'}</span> 
     },
   ];
 
@@ -221,25 +240,28 @@ const AttendanceList: React.FC = () => {
       title: 'Tổng giờ', 
       width: '100px', 
       align: 'center' as const, 
-      render: (value: number) => `${Math.round(value)}h` 
+      render: (value: number) => `${value ? Math.round(value) : 0}h` 
     },
     { 
       key: 'gio_tb_ngay', 
       title: 'TB/ngày', 
       width: '100px', 
       align: 'center' as const, 
-      render: (value: number) => `${value.toFixed(1)}h` 
+      render: (value: number) => `${value ? value.toFixed(1) : '0.0'}h` 
     },
     { 
       key: 'danh_gia', 
       title: 'Đánh giá', 
       width: '120px', 
       align: 'center' as const, 
-      render: (value: string) => (
-        <span className={`status-badge status-${value === 'Đủ giờ' ? 'đủ-giờ' : 'thiếu-giờ'}`}>
-          {value}
-        </span>
-      ) 
+      render: (value: string) => {
+        const status = normalizeStatus(value);
+        return (
+          <span className={`status-badge status-${status === 'Đủ giờ' ? 'success' : 'warning'}`}>
+            {status}
+          </span>
+        );
+      }
     },
   ];
 

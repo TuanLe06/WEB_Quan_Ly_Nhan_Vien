@@ -77,8 +77,6 @@ exports.checkIn = async (req, res) => {
 exports.checkOut = async (req, res) => {
   try {
     const { ma_nv } = req.body;
-    const ngay_lam = new Date().toISOString().split('T')[0];
-    const gio_ra = new Date().toTimeString().split(' ')[0];
 
     // Validate
     if (!ma_nv) {
@@ -87,6 +85,9 @@ exports.checkOut = async (req, res) => {
         message: 'Vui lòng cung cấp mã nhân viên' 
       });
     }
+
+    const ngay_lam = new Date().toISOString().split('T')[0];
+    const gio_ra = new Date().toTimeString().split(' ')[0];
 
     // Kiểm tra đã check-in chưa
     const [existing] = await db.query(
@@ -101,12 +102,11 @@ exports.checkOut = async (req, res) => {
       });
     }
 
-    // Check-out và tính số giờ làm
-    // Giữ nguyên trạng thái "Muộn" nếu đã muộn, không thay đổi
+    // Update gio_ra và tính so_gio
     const [result] = await db.query(`
-      UPDATE CHAMCONG 
+      UPDATE CHAMCONG
       SET gio_ra = ?,
-          so_gio = TIMESTAMPDIFF(MINUTE, gio_vao, ?) / 60
+          so_gio = TIMESTAMPDIFF(MINUTE, CONCAT(ngay_lam, ' ', gio_vao), CONCAT(ngay_lam, ' ', ?)) / 60
       WHERE ma_nv = ? AND ngay_lam = ? AND gio_ra IS NULL
     `, [gio_ra, gio_ra, ma_nv, ngay_lam]);
 
@@ -373,15 +373,16 @@ exports.updateAttendance = async (req, res) => {
     // Cập nhật
     await db.query(`
       UPDATE CHAMCONG 
-      SET gio_vao = ?, 
-          gio_ra = ?,
+      SET gio_vao = COALESCE(?, gio_vao), 
+          gio_ra = COALESCE(?, gio_ra),
           trang_thai = ?,
           so_gio = CASE 
-            WHEN ? IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, ?, ?) / 60
-            ELSE 0 
+            WHEN COALESCE(?, gio_ra) IS NOT NULL AND COALESCE(?, gio_vao) IS NOT NULL 
+            THEN TIMESTAMPDIFF(MINUTE, COALESCE(?, gio_vao), COALESCE(?, gio_ra)) / 60
+            ELSE so_gio 
           END
       WHERE id = ?
-    `, [gio_vao, gio_ra, trang_thai, gio_ra, gio_vao, gio_ra, id]);
+    `, [gio_vao, gio_ra, trang_thai, gio_ra, gio_vao, gio_vao, gio_ra, id]);
 
     res.json({ 
       success: true,
