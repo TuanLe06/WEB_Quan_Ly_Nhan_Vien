@@ -1,15 +1,26 @@
+// ================== contractController.js ==================
 const db = require('../config/database');
 
-// Thêm hợp đồng mới
+// ================= Thêm hợp đồng mới =================
 exports.createContract = async (req, res) => {
   try {
-    const { ma_nv, loai_hop_dong, ngay_bat_dau, ngay_ket_thuc, file_hop_dong } = req.body;
+    // Multer đã parse FormData và đưa text fields vào req.body
+    const { ma_nv, loai_hop_dong, ngay_bat_dau, ngay_ket_thuc } = req.body;
+    const file_hop_dong = req.file?.filename || null;
 
-    // Validate
+    // Log để debug - XEM BACKEND NHẬN ĐƯỢC GÌ
+    console.log('===== CREATE CONTRACT DEBUG =====');
+    console.log('req.body:', req.body);
+    console.log('req.file:', req.file);
+    console.log('Extracted data:', { ma_nv, loai_hop_dong, ngay_bat_dau, ngay_ket_thuc, file_hop_dong });
+    console.log('================================');
+
+    // Validate dữ liệu bắt buộc
     if (!ma_nv || !loai_hop_dong || !ngay_bat_dau) {
+      console.log('Validation failed - missing required fields');
       return res.status(400).json({ 
         success: false,
-        message: 'Vui lòng nhập đầy đủ thông tin' 
+        message: 'Vui lòng nhập đầy đủ thông tin (mã nhân viên, loại hợp đồng, ngày bắt đầu)' 
       });
     }
 
@@ -26,23 +37,31 @@ exports.createContract = async (req, res) => {
       });
     }
 
-    // Kiểm tra ngày hợp lệ
-    if (ngay_ket_thuc && new Date(ngay_ket_thuc) < new Date(ngay_bat_dau)) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Ngày kết thúc phải sau ngày bắt đầu' 
-      });
+    // Kiểm tra ngày hợp lệ - CHỈ khi ngay_ket_thuc có giá trị và không phải empty string
+    if (ngay_ket_thuc && ngay_ket_thuc.trim() !== '') {
+      if (new Date(ngay_ket_thuc) < new Date(ngay_bat_dau)) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Ngày kết thúc phải sau ngày bắt đầu' 
+        });
+      }
     }
 
-    // Thêm hợp đồng
-    await db.query(`
+    // Chuẩn bị giá trị ngay_ket_thuc: null nếu rỗng
+    const finalNgayKetThuc = (ngay_ket_thuc && ngay_ket_thuc.trim() !== '') ? ngay_ket_thuc : null;
+
+    // Thêm hợp đồng vào database
+    const [result] = await db.query(`
       INSERT INTO HOPDONG (ma_nv, loai_hop_dong, ngay_bat_dau, ngay_ket_thuc, file_hop_dong)
       VALUES (?, ?, ?, ?, ?)
-    `, [ma_nv, loai_hop_dong, ngay_bat_dau, ngay_ket_thuc, file_hop_dong]);
+    `, [ma_nv, loai_hop_dong, ngay_bat_dau, finalNgayKetThuc, file_hop_dong]);
+
+    console.log('Contract created successfully, ID:', result.insertId);
 
     res.status(201).json({ 
       success: true,
-      message: 'Thêm hợp đồng thành công' 
+      message: 'Thêm hợp đồng thành công',
+      data: { id: result.insertId }
     });
   } catch (error) {
     console.error('Create contract error:', error);
@@ -54,7 +73,7 @@ exports.createContract = async (req, res) => {
   }
 };
 
-// Lấy danh sách hợp đồng
+// ================= Lấy danh sách hợp đồng =================
 exports.getContracts = async (req, res) => {
   try {
     const { ma_nv, loai_hop_dong, ma_phong } = req.query;
@@ -114,7 +133,7 @@ exports.getContracts = async (req, res) => {
   }
 };
 
-// Lấy chi tiết hợp đồng
+// ================= Lấy chi tiết hợp đồng =================
 exports.getContractById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -162,7 +181,7 @@ exports.getContractById = async (req, res) => {
   }
 };
 
-// Hợp đồng sắp hết hạn
+// ================= Hợp đồng sắp hết hạn =================
 exports.getExpiringContracts = async (req, res) => {
   try {
     const { days = 30 } = req.query;
@@ -199,7 +218,7 @@ exports.getExpiringContracts = async (req, res) => {
   }
 };
 
-// Hợp đồng đã hết hạn
+// ================= Hợp đồng đã hết hạn =================
 exports.getExpiredContracts = async (req, res) => {
   try {
     const [contracts] = await db.query(`
@@ -238,7 +257,7 @@ exports.getExpiredContracts = async (req, res) => {
   }
 };
 
-// Thống kê hợp đồng theo loại
+// ================= Thống kê hợp đồng theo loại =================
 exports.getContractStats = async (req, res) => {
   try {
     const [stats] = await db.query(`
@@ -277,11 +296,22 @@ exports.getContractStats = async (req, res) => {
   }
 };
 
-// Cập nhật hợp đồng
+// ================= Cập nhật hợp đồng =================
 exports.updateContract = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+
+    console.log('===== UPDATE CONTRACT DEBUG =====');
+    console.log('Contract ID:', id);
+    console.log('req.body:', req.body);
+    console.log('req.file:', req.file);
+    console.log('================================');
+
+    // Nếu có upload file mới thì lưu filename
+    if (req.file) {
+      updates.file_hop_dong = req.file.filename;
+    }
 
     // Kiểm tra hợp đồng tồn tại
     const [existing] = await db.query(
@@ -296,7 +326,7 @@ exports.updateContract = async (req, res) => {
       });
     }
 
-    // Không cho phép cập nhật ma_nv
+    // Không cho phép cập nhật ma_nv và id
     delete updates.ma_nv;
     delete updates.id;
 
@@ -317,10 +347,17 @@ exports.updateContract = async (req, res) => {
       }
     }
 
+    // Xử lý ngay_ket_thuc rỗng
+    if (updates.ngay_ket_thuc === '' || updates.ngay_ket_thuc === undefined) {
+      updates.ngay_ket_thuc = null;
+    }
+
     const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
     const values = [...Object.values(updates), id];
 
     await db.query(`UPDATE HOPDONG SET ${fields} WHERE id = ?`, values);
+
+    console.log('Contract updated successfully');
 
     res.json({ 
       success: true,
@@ -336,7 +373,7 @@ exports.updateContract = async (req, res) => {
   }
 };
 
-// Xóa hợp đồng
+// ================= Xóa hợp đồng =================
 exports.deleteContract = async (req, res) => {
   try {
     const { id } = req.params;

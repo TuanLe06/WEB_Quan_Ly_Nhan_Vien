@@ -10,56 +10,74 @@ import './Attendance.css';
 
 const AttendanceList: React.FC = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'today' | 'late' | 'notchecked' | 'stats'>('today');
   const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const [lateEmployees, setLateEmployees] = useState<any[]>([]);
+  const [notCheckedOut, setNotCheckedOut] = useState<any[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    loadAttendances();
-  }, []);
+    loadData();
+  }, [activeTab, selectedMonth, selectedYear]);
 
-  const loadAttendances = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const response = await attendanceApi.getToday();
-      if (response.success && response.data) {
-        setAttendances(response.data);
+      if (activeTab === 'today') {
+        const response = await attendanceApi.getToday();
+        if (response.success && response.data) {
+          setAttendances(response.data);
+        }
+      } else if (activeTab === 'late') {
+        const response = await attendanceApi.getLate();
+        if (response.success && response.data) {
+          setLateEmployees(response.data);
+        }
+      } else if (activeTab === 'notchecked') {
+        const response = await attendanceApi.getNotCheckedOut();
+        if (response.success && response.data) {
+          setNotCheckedOut(response.data);
+        }
+      } else if (activeTab === 'stats') {
+        const response = await attendanceApi.getStats({
+          thang: selectedMonth,
+          nam: selectedYear
+        });
+        if (response.success && response.data) {
+          setMonthlyStats(response.data);
+        }
       }
     } catch (error) {
-      console.error('Failed to load attendances:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const columns = [
-    {
-      key: 'ma_nv',
-      title: 'Mã NV',
-      width: '100px',
-    },
-    {
-      key: 'ten_nv',
-      title: 'Họ tên',
-    },
-    {
-      key: 'ngay_lam',
-      title: 'Ngày',
-      width: '120px',
-      render: (value: string) => formatDate(value),
-    },
+  const todayColumns = [
+    { key: 'ma_nv', title: 'Mã NV', width: '100px' },
+    { key: 'ten_nv', title: 'Họ tên' },
+    { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
     {
       key: 'gio_vao',
       title: 'Giờ vào',
       width: '100px',
       align: 'center' as const,
-      render: (value: string) => formatTime(value),
+      render: (value: string) => (
+        <span className={value > '08:15:00' ? 'text-danger' : 'text-success'}>
+          {formatTime(value)}
+        </span>
+      ),
     },
     {
       key: 'gio_ra',
       title: 'Giờ ra',
       width: '100px',
       align: 'center' as const,
-      render: (value: string | null) => value ? formatTime(value) : '-',
+      render: (value: string | null) => value ? formatTime(value) : <span className="text-warning">Chưa checkout</span>,
     },
     {
       key: 'so_gio',
@@ -74,41 +92,107 @@ const AttendanceList: React.FC = () => {
       width: '120px',
       align: 'center' as const,
       render: (value: string) => (
-        <span className={`status-badge status-${value?.toLowerCase()}`}>
+        <span className={`status-badge status-${value?.toLowerCase().replace(' ', '-')}`}>
           {value || 'Đúng giờ'}
         </span>
       ),
     },
   ];
 
+  const lateColumns = [
+    { key: 'ngay_lam', title: 'Ngày', width: '120px', render: (value: string) => formatDate(value) },
+    { key: 'ma_nv', title: 'Mã NV', width: '100px' },
+    { key: 'ten_nv', title: 'Họ tên' },
+    { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
+    { key: 'gio_vao', title: 'Giờ vào', width: '100px', align: 'center' as const, render: (value: string) => <span className="text-danger">{formatTime(value)}</span> },
+    { key: 'tre_phut', title: 'Trễ', width: '100px', align: 'center' as const, render: (value: string) => <span className="text-danger">{value}</span> },
+  ];
+
+  const notCheckedColumns = [
+    { key: 'ma_nv', title: 'Mã NV', width: '100px' },
+    { key: 'ten_nv', title: 'Họ tên' },
+    { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
+    { key: 'gio_vao', title: 'Giờ check-in', width: '120px', align: 'center' as const, render: (value: string) => formatTime(value) },
+    { key: 'da_lam', title: 'Đã làm', width: '120px', align: 'center' as const, render: (value: string) => <span className="text-warning">{value}</span> },
+  ];
+
+  const statsColumns = [
+    { key: 'ma_nv', title: 'Mã NV', width: '100px' },
+    { key: 'ten_nv', title: 'Họ tên' },
+    { key: 'ten_phong', title: 'Phòng ban', width: '150px' },
+    { key: 'so_ngay_lam', title: 'Số ngày', width: '100px', align: 'center' as const },
+    { key: 'tong_gio', title: 'Tổng giờ', width: '100px', align: 'center' as const, render: (value: number) => `${Math.round(value)}h` },
+    { key: 'gio_tb_ngay', title: 'TB/ngày', width: '100px', align: 'center' as const, render: (value: number) => `${value.toFixed(1)}h` },
+    { key: 'danh_gia', title: 'Đánh giá', width: '120px', align: 'center' as const, render: (value: string) => <span className={`status-badge status-${value === 'Đủ giờ' ? 'success' : 'warning'}`}>{value}</span> },
+  ];
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'today': {
+        const dataWithKey = attendances.map(item => ({ ...item, key: item.id }));
+        return <Table columns={todayColumns} data={dataWithKey} loading={loading} rowKey="key" emptyText="Chưa có ai chấm công hôm nay" />;
+      }
+      case 'late': {
+        const dataWithKey = lateEmployees.map(emp => ({ ...emp, key: `${emp.ma_nv}-${emp.ngay_lam}` }));
+        return <Table columns={lateColumns} data={dataWithKey} loading={loading} rowKey="key" emptyText="Không có nhân viên đi muộn" />;
+      }
+      case 'notchecked': {
+        const dataWithKey = notCheckedOut.map(emp => ({ ...emp, key: emp.ma_nv }));
+        return <Table columns={notCheckedColumns} data={dataWithKey} loading={loading} rowKey="key" emptyText="Tất cả đã checkout" />;
+      }
+      case 'stats': {
+        const dataWithKey = monthlyStats.map(emp => ({ ...emp, key: emp.ma_nv }));
+        return (
+          <div>
+            <div className="stats-filter">
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="input">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => <option key={month} value={month}>Tháng {month}</option>)}
+              </select>
+              <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="input">
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </div>
+            <Table columns={statsColumns} data={dataWithKey} loading={loading} rowKey="key" emptyText="Chưa có dữ liệu thống kê" />
+          </div>
+        );
+      }
+    }
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Chấm công hôm nay</h1>
-          <p className="page-subtitle">Danh sách chấm công ngày {formatDate(new Date().toISOString())}</p>
+          <h1 className="page-title">Quản lý chấm công</h1>
+          <p className="page-subtitle">Theo dõi chấm công và thống kê</p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => navigate('/attendance/check')}
-          icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        >
-          Chấm công
-        </Button>
+        <Button variant="primary" onClick={() => navigate('/attendance/check')} icon={
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        }>Chấm công</Button>
       </div>
 
       <Card>
-        <Table
-          columns={columns}
-          data={attendances}
-          loading={loading}
-          rowKey="id"
-          emptyText="Chưa có ai chấm công hôm nay"
-        />
+        <div className="tabs-container">
+          <div className="tabs-header">
+            <button className={`tab-button ${activeTab === 'today' ? 'tab-button-active' : ''}`} onClick={() => setActiveTab('today')}>
+              Hôm nay ({attendances.length})
+            </button>
+            <button className={`tab-button ${activeTab === 'late' ? 'tab-button-active' : ''}`} onClick={() => setActiveTab('late')}>
+              Đi muộn ({lateEmployees.length})
+            </button>
+            <button className={`tab-button ${activeTab === 'notchecked' ? 'tab-button-active' : ''}`} onClick={() => setActiveTab('notchecked')}>
+              Chưa checkout ({notCheckedOut.length})
+            </button>
+            <button className={`tab-button ${activeTab === 'stats' ? 'tab-button-active' : ''}`} onClick={() => setActiveTab('stats')}>
+              Thống kê tháng
+            </button>
+          </div>
+          <div className="tabs-content">
+            {renderTabContent()}
+          </div>
+        </div>
       </Card>
     </div>
   );

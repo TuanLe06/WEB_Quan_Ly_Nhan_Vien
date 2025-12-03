@@ -25,6 +25,7 @@ const ContractForm: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Load danh sách nhân viên và contract nếu là edit
   useEffect(() => {
     loadEmployees();
     if (isEdit && id) {
@@ -77,43 +78,68 @@ const ContractForm: React.FC = () => {
     }
   };
 
+  // Validate form
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.ma_nv) newErrors.ma_nv = 'Vui lòng chọn nhân viên';
     if (!formData.ngay_bat_dau) newErrors.ngay_bat_dau = 'Vui lòng chọn ngày bắt đầu';
-
+    
+    // Validate ngày kết thúc phải sau ngày bắt đầu
+    if (formData.ngay_ket_thuc && formData.ngay_bat_dau) {
+      if (new Date(formData.ngay_ket_thuc) < new Date(formData.ngay_bat_dau)) {
+        newErrors.ngay_ket_thuc = 'Ngày kết thúc phải sau ngày bắt đầu';
+      }
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validate()) return;
 
     try {
       setLoading(true);
+
       const formDataToSend = new FormData();
       formDataToSend.append('ma_nv', formData.ma_nv);
       formDataToSend.append('loai_hop_dong', formData.loai_hop_dong);
       formDataToSend.append('ngay_bat_dau', formData.ngay_bat_dau);
+      
+      // Chỉ append ngay_ket_thuc nếu có giá trị
       if (formData.ngay_ket_thuc) {
         formDataToSend.append('ngay_ket_thuc', formData.ngay_ket_thuc);
       }
+      
+      // CHỈ append file nếu thực sự có file được chọn
       if (file) {
-        formDataToSend.append('file', file);
+        formDataToSend.append('file_hop_dong', file);
+      }
+
+      // Debug: Log FormData contents
+      console.log('Sending FormData:');
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0], pair[1]);
       }
 
       if (isEdit && id) {
         await contractApi.update(parseInt(id), formDataToSend);
+        alert('Cập nhật hợp đồng thành công!');
       } else {
         await contractApi.create(formDataToSend);
+        alert('Thêm hợp đồng thành công!');
       }
+
       navigate('/contracts');
     } catch (error: any) {
       console.error('Failed to save contract:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra!');
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+      
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra!';
+      alert(`Lỗi: ${errorMessage}\n\nChi tiết: ${JSON.stringify(error.response?.data)}`);
     } finally {
       setLoading(false);
     }
@@ -126,9 +152,7 @@ const ContractForm: React.FC = () => {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">
-          {isEdit ? 'Cập nhật hợp đồng' : 'Thêm hợp đồng mới'}
-        </h1>
+        <h1 className="page-title">{isEdit ? 'Cập nhật hợp đồng' : 'Thêm hợp đồng mới'}</h1>
         <p className="page-subtitle">
           {isEdit ? 'Chỉnh sửa thông tin hợp đồng' : 'Điền thông tin hợp đồng mới'}
         </p>
@@ -185,6 +209,7 @@ const ContractForm: React.FC = () => {
             name="ngay_ket_thuc"
             value={formData.ngay_ket_thuc}
             onChange={handleChange}
+            error={errors.ngay_ket_thuc}
             helperText="Để trống nếu hợp đồng không xác định thời hạn"
           />
 
@@ -208,11 +233,7 @@ const ContractForm: React.FC = () => {
             >
               Hủy
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              loading={loading}
-            >
+            <Button type="submit" variant="primary" loading={loading}>
               {isEdit ? 'Cập nhật' : 'Thêm mới'}
             </Button>
           </div>

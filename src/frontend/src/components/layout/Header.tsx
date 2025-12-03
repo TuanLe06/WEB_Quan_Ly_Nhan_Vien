@@ -3,7 +3,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import './Layout.css';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onToggleSidebar: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -12,11 +16,23 @@ const Header: React.FC = () => {
     navigate('/login');
   };
 
+  const handleTitleClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <header className="header">
       <div className="header-content">
         <div className="header-left">
-          <h1 className="header-title">Quản Lí Nhân Viên</h1>
+          <button className="menu-toggle" onClick={onToggleSidebar}>
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          
+          <h1 className="header-title" onClick={handleTitleClick}>
+            Quản Lí Nhân Viên
+          </h1>
         </div>
         
         <div className="header-right">

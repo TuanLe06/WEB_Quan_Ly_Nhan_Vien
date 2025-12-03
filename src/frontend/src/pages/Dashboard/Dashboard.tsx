@@ -1,9 +1,5 @@
-// src/pages/Dashboard/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
 import { dashboardApi } from '../../api/dashboardApi';
-import { attendanceApi } from '../../api/attendanceApi';
-import { leaveApi } from '../../api/leaveApi';
-import { DashboardStats, Attendance, Leave } from '../../types';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
 import { formatCurrency } from '../../utils/formatters';
@@ -21,8 +17,11 @@ interface StatCard {
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<StatCard[]>([]);
-  const [recentAttendances, setRecentAttendances] = useState<Attendance[]>([]);
-  const [pendingLeaves, setPendingLeaves] = useState<Leave[]>([]);
+  const [employeesByDept, setEmployeesByDept] = useState<any[]>([]);
+  const [employeesByPos, setEmployeesByPos] = useState<any[]>([]);
+  const [salaryTrend, setSalaryTrend] = useState<any[]>([]);
+  const [topEmployees, setTopEmployees] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -32,21 +31,31 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load all data in parallel
-      const [statsRes, attendanceRes, leaveRes] = await Promise.all([
+      // Load tất cả data song song
+      const [
+        statsRes,
+        deptRes,
+        posRes,
+        salaryRes,
+        topRes,
+        activitiesRes
+      ] = await Promise.all([
         dashboardApi.getStats(),
-        attendanceApi.getToday(),
-        leaveApi.getAll({ page: 1, limit: 10 })
+        dashboardApi.getEmployeesByDepartment(),
+        dashboardApi.getEmployeesByPosition(),
+        dashboardApi.getSalaryTrend(6),
+        dashboardApi.getTopEmployees(10),
+        dashboardApi.getRecentActivities(10)
       ]);
 
-      // Set stats
+      // Set stats cards
       if (statsRes.success && statsRes.data) {
         const data = statsRes.data;
         setStats([
           {
             title: 'Tổng nhân viên',
             value: data.tongNhanVien || 0,
-            change: `${data.nhanVienMoi || 0} nhân viên mới`,
+            change: `${data.nhanVienMoi || 0} nhân viên mới tháng này`,
             changeType: 'positive',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,8 +67,8 @@ const Dashboard: React.FC = () => {
           {
             title: 'Đã chấm công',
             value: data.daChamCong || 0,
-            change: data.tongNhanVien > 0 ? `${((data.daChamCong / data.tongNhanVien) * 100).toFixed(1)}% tỷ lệ` : '0%',
-            changeType: 'positive',
+            change: `${data.tongNhanVien - data.daChamCong} chưa chấm công`,
+            changeType: data.daChamCong >= data.tongNhanVien * 0.8 ? 'positive' : 'negative',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -70,7 +79,7 @@ const Dashboard: React.FC = () => {
           {
             title: 'Yêu cầu nghỉ phép',
             value: data.yeuCauNghiPhep || 0,
-            change: `${data.nghiPhepHomNay || 0} nghỉ hôm nay`,
+            change: `${data.nghiPhepHomNay || 0} người nghỉ hôm nay`,
             changeType: 'neutral',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,9 +90,9 @@ const Dashboard: React.FC = () => {
           },
           {
             title: 'Tổng lương tháng',
-            value: data.tongLuongThang ? formatCurrency(data.tongLuongThang) : '0 ₫',
-            change: `Hợp đồng sắp hết: ${data.hopDongSapHetHan || 0}`,
-            changeType: 'positive',
+            value: formatCurrency(data.tongLuongThang || 0),
+            change: `${data.hopDongSapHetHan || 0} hợp đồng sắp hết hạn`,
+            changeType: data.hopDongSapHetHan > 0 ? 'negative' : 'positive',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -94,22 +103,43 @@ const Dashboard: React.FC = () => {
         ]);
       }
 
-      // Set recent attendances
-      if (attendanceRes.success && attendanceRes.data) {
-        setRecentAttendances(attendanceRes.data.slice(0, 5));
-      }
-
-      // Set pending leaves (only status "Chờ duyệt")
-      if (leaveRes.success && leaveRes.data) {
-        const pending = leaveRes.data.filter((leave: Leave) => leave.trang_thai === 'Chờ duyệt');
-        setPendingLeaves(pending.slice(0, 3));
-      }
+      // Set other data
+      if (deptRes.success) setEmployeesByDept(deptRes.data || []);
+      if (posRes.success) setEmployeesByPos(posRes.data || []);
+      if (salaryRes.success) setSalaryTrend(salaryRes.data || []);
+      if (topRes.success) setTopEmployees(topRes.data || []);
+      if (activitiesRes.success) setRecentActivities(activitiesRes.data || []);
 
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'new_employee':
+        return '👤';
+      case 'leave_request':
+        return '📅';
+      case 'new_contract':
+        return '📄';
+      default:
+        return '📌';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Hôm nay';
+    if (diffDays === 1) return 'Hôm qua';
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    return date.toLocaleDateString('vi-VN');
   };
 
   if (loading) {
@@ -123,6 +153,7 @@ const Dashboard: React.FC = () => {
         <p className="page-subtitle">Tổng quan hệ thống quản lý nhân sự</p>
       </div>
 
+      {/* Stats Cards */}
       <div className="stats-grid">
         {stats.map((stat, index) => (
           <div key={index} className="stat-card" style={{ '--stat-color': stat.color } as React.CSSProperties}>
@@ -141,90 +172,95 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="dashboard-grid">
-        <Card title="Chấm công gần đây" className="dashboard-card">
-          <div className="attendance-list">
-            {recentAttendances.length > 0 ? (
-              recentAttendances.map((att) => (
-                <div key={att.id} className="attendance-item">
-                  <div className="attendance-avatar">
-                    {att.ten_nv?.charAt(0).toUpperCase() || 'N'}
-                  </div>
-                  <div className="attendance-info">
-                    <div className="attendance-name">{att.ten_nv || 'Nhân viên'}</div>
-                    <div className="attendance-time">Check-in: {att.gio_vao}</div>
-                  </div>
-                  <div className="attendance-status status-present">
-                    {att.trang_thai || 'Đúng giờ'}
-                  </div>
+        {/* Nhân viên theo phòng ban */}
+        <Card title="Nhân viên theo phòng ban" className="dashboard-card">
+          <div className="department-list">
+            {employeesByDept.slice(0, 5).map((dept, index) => (
+              <div key={index} className="department-item">
+                <div className="department-info">
+                  <div className="department-name">{dept.ten_phong}</div>
+                  <div className="department-count">{dept.so_luong} nhân viên</div>
                 </div>
-              ))
-            ) : (
-              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-                Chưa có ai chấm công hôm nay
-              </p>
-            )}
+                <div className="department-bar">
+                  <div 
+                    className="department-bar-fill" 
+                    style={{ 
+                      width: `${(dept.so_luong / Math.max(...employeesByDept.map(d => d.so_luong))) * 100}%`,
+                      background: `linear-gradient(135deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
-        <Card title="Đơn nghỉ phép chờ duyệt" className="dashboard-card">
-          <div className="leave-list">
-            {pendingLeaves.length > 0 ? (
-              pendingLeaves.map((leave) => (
-                <div key={leave.id} className="leave-item">
-                  <div className="leave-info">
-                    <div className="leave-name">{leave.ten_nv || 'Nhân viên'}</div>
-                    <div className="leave-date">
-                      {new Date(leave.ngay_bat_dau).toLocaleDateString('vi-VN')} - {new Date(leave.ngay_ket_thuc).toLocaleDateString('vi-VN')}
-                    </div>
-                  </div>
-                  <div className="leave-actions">
-                    <button className="leave-btn leave-btn-approve">Duyệt</button>
-                    <button className="leave-btn leave-btn-reject">Từ chối</button>
-                  </div>
+        {/* Top nhân viên */}
+        <Card title="Top 5 nhân viên xuất sắc" className="dashboard-card">
+          <div className="top-employees-list">
+            {topEmployees.slice(0, 5).map((emp, index) => (
+              <div key={index} className="top-employee-item">
+                <div className="top-rank">#{index + 1}</div>
+                <div className="top-employee-avatar">
+                  {emp.ten_nv?.charAt(0).toUpperCase()}
                 </div>
-              ))
-            ) : (
-              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-                Không có đơn chờ duyệt
-              </p>
-            )}
+                <div className="top-employee-info">
+                  <div className="top-employee-name">{emp.ten_nv}</div>
+                  <div className="top-employee-dept">{emp.ten_phong}</div>
+                </div>
+                <div className="top-employee-hours">
+                  {Math.round(emp.tong_gio)} giờ
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
-        <Card title="Thống kê phòng ban" className="dashboard-card dashboard-card-full">
-          <div className="new-employees">
-            <div className="employee-card">
-              <div className="employee-avatar">
-                <span>📊</span>
+        {/* Xu hướng lương 6 tháng */}
+        <Card title="Xu hướng lương 6 tháng gần nhất" className="dashboard-card dashboard-card-full">
+          <div className="salary-chart">
+            {salaryTrend.map((item, index) => {
+              const maxSalary = Math.max(...salaryTrend.map(s => s.tong_luong));
+              const height = (item.tong_luong / maxSalary) * 200;
+              
+              return (
+                <div key={index} className="salary-bar-wrapper">
+                  <div className="salary-bar-container">
+                    <div 
+                      className="salary-bar" 
+                      style={{ height: `${height}px` }}
+                      title={formatCurrency(item.tong_luong)}
+                    />
+                  </div>
+                  <div className="salary-label">
+                    T{item.thang}/{item.nam}
+                  </div>
+                  <div className="salary-value">
+                    {formatCurrency(item.tong_luong)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* Hoạt động gần đây */}
+        <Card title="Hoạt động gần đây" className="dashboard-card dashboard-card-full">
+          <div className="activities-list">
+            {recentActivities.map((activity, index) => (
+              <div key={index} className="activity-item">
+                <div className="activity-icon">
+                  {getActivityIcon(activity.loai)}
+                </div>
+                <div className="activity-content">
+                  <div className="activity-text">{activity.mo_ta}</div>
+                  <div className="activity-time">{formatDate(activity.ngay)}</div>
+                </div>
               </div>
-              <div className="employee-name">Tổng nhân viên</div>
-              <div className="employee-position">{stats[0]?.value || 0} người</div>
-              <div className="employee-date">Đang làm việc</div>
-            </div>
-            <div className="employee-card">
-              <div className="employee-avatar">
-                <span>✓</span>
-              </div>
-              <div className="employee-name">Đã chấm công</div>
-              <div className="employee-position">{stats[1]?.value || 0} người</div>
-              <div className="employee-date">Hôm nay</div>
-            </div>
-            <div className="employee-card">
-              <div className="employee-avatar">
-                <span>📅</span>
-              </div>
-              <div className="employee-name">Nghỉ phép</div>
-              <div className="employee-position">{pendingLeaves.length} yêu cầu</div>
-              <div className="employee-date">Chờ duyệt</div>
-            </div>
-            <div className="employee-card">
-              <div className="employee-avatar">
-                <span>📄</span>
-              </div>
-              <div className="employee-name">Hợp đồng</div>
-              <div className="employee-position">{stats[3]?.change.match(/\d+/)?.[0] || 0} hợp đồng</div>
-              <div className="employee-date">Sắp hết hạn</div>
-            </div>
+            ))}
+            {recentActivities.length === 0 && (
+              <p className="empty-message">Chưa có hoạt động nào</p>
+            )}
           </div>
         </Card>
       </div>

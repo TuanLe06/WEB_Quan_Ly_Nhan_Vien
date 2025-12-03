@@ -15,16 +15,18 @@ export const contractApi = {
   },
 
   // POST /api/contracts
-  create: async (contract: FormData): Promise<ApiResponse<Contract>> => {
-    const { data } = await axios.post<ApiResponse<Contract>>('/contracts', contract, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+  create: async (contractData: FormData): Promise<ApiResponse<Contract>> => {
+    // Sử dụng FormData để upload file
+    const { data } = await axios.post<ApiResponse<Contract>>('/contracts', contractData, {
+      headers: { 'Content-Type': 'multipart/form-data' }, // quan trọng
     });
     return data;
   },
 
   // PUT /api/contracts/:id
-  update: async (id: number, contract: FormData): Promise<ApiResponse<Contract>> => {
-    const { data } = await axios.put<ApiResponse<Contract>>(`/contracts/${id}`, contract, {
+  update: async (id: number, contractData: FormData): Promise<ApiResponse<Contract>> => {
+    // Sử dụng FormData để upload file khi cập nhật
+    const { data } = await axios.put<ApiResponse<Contract>>(`/contracts/${id}`, contractData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;

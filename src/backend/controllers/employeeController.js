@@ -246,32 +246,96 @@ exports.updateEmployee = async (req, res) => {
 
 // Xóa nhân viên (soft delete)
 exports.deleteEmployee = async (req, res) => {
+  const connection = await db.getConnection();
+  
   try {
     const { id } = req.params;
 
+    await connection.beginTransaction();
+
     // Kiểm tra nhân viên tồn tại
-    const [existing] = await db.query('SELECT * FROM NHANVIEN WHERE ma_nv = ?', [id]);
-    if (existing.length === 0) {
+    const [employees] = await connection.query(
+      'SELECT ma_nv, ten_nv FROM NHANVIEN WHERE ma_nv = ?',
+      [id]
+    );
+
+    if (employees.length === 0) {
+      await connection.rollback();
       return res.status(404).json({ 
         success: false,
         message: 'Không tìm thấy nhân viên' 
       });
     }
 
-    // Soft delete: chỉ đổi trạng thái
-    await db.query('UPDATE NHANVIEN SET trang_thai = 0 WHERE ma_nv = ?', [id]);
+    console.log(`Đang xóa nhân viên: ${employees[0].ten_nv} (${id})`);
+
+    // Xóa theo thứ tự
+    // 1. Xóa lương
+    const [luongResult] = await connection.query(
+      'DELETE FROM LUONG WHERE ma_nv = ?',
+      [id]
+    );
+    console.log(`Đã xóa ${luongResult.affectedRows} bản ghi lương`);
+
+    // 2. Xóa chấm công
+    const [chamCongResult] = await connection.query(
+      'DELETE FROM CHAMCONG WHERE ma_nv = ?',
+      [id]
+    );
+    console.log(`Đã xóa ${chamCongResult.affectedRows} bản ghi chấm công`);
+
+    // 3. Xóa nghỉ phép
+    const [nghiPhepResult] = await connection.query(
+      'DELETE FROM NGHIPHEP WHERE ma_nv = ?',
+      [id]
+    );
+    console.log(`Đã xóa ${nghiPhepResult.affectedRows} bản ghi nghỉ phép`);
+
+    // 4. Xóa hợp đồng
+    const [hopDongResult] = await connection.query(
+      'DELETE FROM HOPDONG WHERE ma_nv = ?',
+      [id]
+    );
+    console.log(`Đã xóa ${hopDongResult.affectedRows} hợp đồng`);
+
+    // 5. Xóa tài khoản
+    const [nguoiDungResult] = await connection.query(
+      'DELETE FROM NGUOIDUNG WHERE ma_nv = ?',
+      [id]
+    );
+    console.log(`Đã xóa ${nguoiDungResult.affectedRows} tài khoản`);
+
+    // 6. Xóa nhân viên
+    const [nhanVienResult] = await connection.query(
+      'DELETE FROM NHANVIEN WHERE ma_nv = ?',
+      [id]
+    );
+    console.log(`Đã xóa nhân viên`);
+
+    await connection.commit();
     
     res.json({ 
       success: true,
-      message: 'Xóa nhân viên thành công' 
+      message: `Đã xóa nhân viên ${employees[0].ten_nv} và tất cả dữ liệu liên quan`,
+      deleted: {
+        nhan_vien: nhanVienResult.affectedRows,
+        tai_khoan: nguoiDungResult.affectedRows,
+        luong: luongResult.affectedRows,
+        cham_cong: chamCongResult.affectedRows,
+        nghi_phep: nghiPhepResult.affectedRows,
+        hop_dong: hopDongResult.affectedRows
+      }
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Delete employee error:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Lỗi server', 
+      message: 'Lỗi xóa nhân viên', 
       error: error.message 
     });
+  } finally {
+    connection.release();
   }
 };
 
