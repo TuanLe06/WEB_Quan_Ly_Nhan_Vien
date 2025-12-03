@@ -1,8 +1,12 @@
+// src/pages/Dashboard/Dashboard.tsx
 import React, { useEffect, useState } from 'react';
 import { dashboardApi } from '../../api/dashboardApi';
-import { DashboardStats } from '../../types';
+import { attendanceApi } from '../../api/attendanceApi';
+import { leaveApi } from '../../api/leaveApi';
+import { DashboardStats, Attendance, Leave } from '../../types';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
+import { formatCurrency } from '../../utils/formatters';
 import './Dashboard.css';
 
 interface StatCard {
@@ -10,13 +14,15 @@ interface StatCard {
   value: string | number;
   change: string;
   changeType: 'positive' | 'negative' | 'neutral';
-  icon: React.ReactNode;
+  icon: React.ReactElement;
   color: string;
 }
 
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<StatCard[]>([]);
+  const [recentAttendances, setRecentAttendances] = useState<Attendance[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<Leave[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -25,15 +31,22 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await dashboardApi.getStats();
       
-      if (response.success && response.data) {
-        const data = response.data;
+      // Load all data in parallel
+      const [statsRes, attendanceRes, leaveRes] = await Promise.all([
+        dashboardApi.getStats(),
+        attendanceApi.getToday(),
+        leaveApi.getAll({ page: 1, limit: 10 })
+      ]);
+
+      // Set stats
+      if (statsRes.success && statsRes.data) {
+        const data = statsRes.data;
         setStats([
           {
             title: 'Tổng nhân viên',
-            value: data.tongNhanVien,
-            change: `${data.nhanVienMoi} nhân viên mới`,
+            value: data.tongNhanVien || 0,
+            change: `${data.nhanVienMoi || 0} nhân viên mới`,
             changeType: 'positive',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,8 +57,8 @@ const Dashboard: React.FC = () => {
           },
           {
             title: 'Đã chấm công',
-            value: data.daChamCong,
-            change: `${((data.daChamCong / data.tongNhanVien) * 100).toFixed(1)}% tỷ lệ đi làm`,
+            value: data.daChamCong || 0,
+            change: data.tongNhanVien > 0 ? `${((data.daChamCong / data.tongNhanVien) * 100).toFixed(1)}% tỷ lệ` : '0%',
             changeType: 'positive',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,8 +69,8 @@ const Dashboard: React.FC = () => {
           },
           {
             title: 'Yêu cầu nghỉ phép',
-            value: data.yeuCauNghiPhep,
-            change: `${data.nghiPhepHomNay} nghỉ hôm nay`,
+            value: data.yeuCauNghiPhep || 0,
+            change: `${data.nghiPhepHomNay || 0} nghỉ hôm nay`,
             changeType: 'neutral',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,8 +81,8 @@ const Dashboard: React.FC = () => {
           },
           {
             title: 'Tổng lương tháng',
-            value: `${(data.tongLuongThang / 1000000).toFixed(1)}M`,
-            change: `Hợp đồng sắp hết: ${data.hopDongSapHetHan}`,
+            value: data.tongLuongThang ? formatCurrency(data.tongLuongThang) : '0 ₫',
+            change: `Hợp đồng sắp hết: ${data.hopDongSapHetHan || 0}`,
             changeType: 'positive',
             icon: (
               <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,6 +93,18 @@ const Dashboard: React.FC = () => {
           },
         ]);
       }
+
+      // Set recent attendances
+      if (attendanceRes.success && attendanceRes.data) {
+        setRecentAttendances(attendanceRes.data.slice(0, 5));
+      }
+
+      // Set pending leaves (only status "Chờ duyệt")
+      if (leaveRes.success && leaveRes.data) {
+        const pending = leaveRes.data.filter((leave: Leave) => leave.trang_thai === 'Chờ duyệt');
+        setPendingLeaves(pending.slice(0, 3));
+      }
+
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -118,50 +143,88 @@ const Dashboard: React.FC = () => {
       <div className="dashboard-grid">
         <Card title="Chấm công gần đây" className="dashboard-card">
           <div className="attendance-list">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="attendance-item">
-                <div className="attendance-avatar">NV</div>
-                <div className="attendance-info">
-                  <div className="attendance-name">Nhân viên {i}</div>
-                  <div className="attendance-time">Check-in: 08:30 AM</div>
+            {recentAttendances.length > 0 ? (
+              recentAttendances.map((att) => (
+                <div key={att.id} className="attendance-item">
+                  <div className="attendance-avatar">
+                    {att.ten_nv?.charAt(0).toUpperCase() || 'N'}
+                  </div>
+                  <div className="attendance-info">
+                    <div className="attendance-name">{att.ten_nv || 'Nhân viên'}</div>
+                    <div className="attendance-time">Check-in: {att.gio_vao}</div>
+                  </div>
+                  <div className="attendance-status status-present">
+                    {att.trang_thai || 'Đúng giờ'}
+                  </div>
                 </div>
-                <div className="attendance-status status-present">
-                  Đúng giờ
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+                Chưa có ai chấm công hôm nay
+              </p>
+            )}
           </div>
         </Card>
 
         <Card title="Đơn nghỉ phép chờ duyệt" className="dashboard-card">
           <div className="leave-list">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="leave-item">
-                <div className="leave-info">
-                  <div className="leave-name">Nhân viên {i}</div>
-                  <div className="leave-date">15/12 - 17/12/2024</div>
+            {pendingLeaves.length > 0 ? (
+              pendingLeaves.map((leave) => (
+                <div key={leave.id} className="leave-item">
+                  <div className="leave-info">
+                    <div className="leave-name">{leave.ten_nv || 'Nhân viên'}</div>
+                    <div className="leave-date">
+                      {new Date(leave.ngay_bat_dau).toLocaleDateString('vi-VN')} - {new Date(leave.ngay_ket_thuc).toLocaleDateString('vi-VN')}
+                    </div>
+                  </div>
+                  <div className="leave-actions">
+                    <button className="leave-btn leave-btn-approve">Duyệt</button>
+                    <button className="leave-btn leave-btn-reject">Từ chối</button>
+                  </div>
                 </div>
-                <div className="leave-actions">
-                  <button className="leave-btn leave-btn-approve">Duyệt</button>
-                  <button className="leave-btn leave-btn-reject">Từ chối</button>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+                Không có đơn chờ duyệt
+              </p>
+            )}
           </div>
         </Card>
 
-        <Card title="Phòng ban" className="dashboard-card dashboard-card-full">
+        <Card title="Thống kê phòng ban" className="dashboard-card dashboard-card-full">
           <div className="new-employees">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="employee-card">
-                <div className="employee-avatar">
-                  <span>PB{i}</span>
-                </div>
-                <div className="employee-name">Phòng ban {i}</div>
-                <div className="employee-position">{10 + i} nhân viên</div>
-                <div className="employee-date">Thành lập: 2020</div>
+            <div className="employee-card">
+              <div className="employee-avatar">
+                <span>📊</span>
               </div>
-            ))}
+              <div className="employee-name">Tổng nhân viên</div>
+              <div className="employee-position">{stats[0]?.value || 0} người</div>
+              <div className="employee-date">Đang làm việc</div>
+            </div>
+            <div className="employee-card">
+              <div className="employee-avatar">
+                <span>✓</span>
+              </div>
+              <div className="employee-name">Đã chấm công</div>
+              <div className="employee-position">{stats[1]?.value || 0} người</div>
+              <div className="employee-date">Hôm nay</div>
+            </div>
+            <div className="employee-card">
+              <div className="employee-avatar">
+                <span>📅</span>
+              </div>
+              <div className="employee-name">Nghỉ phép</div>
+              <div className="employee-position">{pendingLeaves.length} yêu cầu</div>
+              <div className="employee-date">Chờ duyệt</div>
+            </div>
+            <div className="employee-card">
+              <div className="employee-avatar">
+                <span>📄</span>
+              </div>
+              <div className="employee-name">Hợp đồng</div>
+              <div className="employee-position">{stats[3]?.change.match(/\d+/)?.[0] || 0} hợp đồng</div>
+              <div className="employee-date">Sắp hết hạn</div>
+            </div>
           </div>
         </Card>
       </div>

@@ -125,10 +125,6 @@ const Login: React.FC = () => {
               Đăng nhập
             </Button>
           </form>
-
-          <div className="login-footer">
-            <p>Chưa có tài khoản? <a href="#">Đăng ký ngay</a></p>
-          </div>
         </div>
 
         <div className="login-info">
