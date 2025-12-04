@@ -19,6 +19,11 @@ router.post('/calculate-all', auth, roleCheck('Admin', 'KeToan'), salaryControll
 // @access  Private - Admin, KeToan
 router.get('/monthly', auth, roleCheck('Admin', 'KeToan'), salaryController.getMonthlySalary);
 
+// @route   GET /api/salary/deducted
+// @desc    Danh sách nhân viên bị trừ lương
+// @access  Private - Admin, KeToan
+router.get('/deducted', auth, roleCheck('Admin', 'KeToan'), salaryController.getDeductedSalary);
+
 // @route   GET /api/salary/top
 // @desc    Top nhân viên lương cao nhất
 // @access  Private - Admin, KeToan

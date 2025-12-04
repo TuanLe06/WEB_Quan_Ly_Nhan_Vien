@@ -5,7 +5,6 @@ exports.calculateSalary = async (req, res) => {
   try {
     const { ma_nv, thang, nam } = req.body;
 
-    // Validate
     if (!ma_nv || !thang || !nam) {
       return res.status(400).json({ 
         success: false,
@@ -42,7 +41,6 @@ exports.calculateAllSalary = async (req, res) => {
   try {
     const { thang, nam } = req.body;
 
-    // Validate
     if (!thang || !nam) {
       return res.status(400).json({ 
         success: false,
@@ -50,7 +48,6 @@ exports.calculateAllSalary = async (req, res) => {
       });
     }
 
-    // Lấy danh sách nhân viên đang làm việc
     const [employees] = await db.query(
       'SELECT ma_nv FROM NHANVIEN WHERE trang_thai = 1'
     );
@@ -58,7 +55,6 @@ exports.calculateAllSalary = async (req, res) => {
     let successCount = 0;
     let errorCount = 0;
 
-    // Tính lương cho từng nhân viên
     for (const emp of employees) {
       try {
         await db.query('CALL TinhLuongThang(?, ?, ?)', [emp.ma_nv, thang, nam]);
@@ -127,11 +123,15 @@ exports.getMonthlySalary = async (req, res) => {
 
     // Tính tổng
     const tongLuong = salaries.reduce((sum, item) => sum + parseFloat(item.luong_thuc_nhan), 0);
+    const tongTruLuong = salaries.reduce((sum, item) => sum + parseFloat(item.tru_luong || 0), 0);
+    const soNVBiTru = salaries.filter(item => parseFloat(item.tru_luong || 0) > 0).length;
 
     res.json({
       success: true,
       count: salaries.length,
       tongLuong: tongLuong,
+      tongTruLuong: tongTruLuong,
+      soNVBiTru: soNVBiTru,
       data: salaries
     });
   } catch (error) {
@@ -214,9 +214,11 @@ exports.getTopSalary = async (req, res) => {
         nv.ten_nv,
         pb.ten_phong,
         cv.ten_chuc_vu,
-        l.luong_thuc_nhan,
         l.tong_gio,
-        l.luong_them
+        nv.luong_co_ban,
+        l.luong_them,
+        l.tru_luong,
+        l.luong_thuc_nhan
       FROM LUONG l
       JOIN NHANVIEN nv ON l.ma_nv = nv.ma_nv
       JOIN PHONGBAN pb ON nv.ma_phong = pb.ma_phong
@@ -233,6 +235,55 @@ exports.getTopSalary = async (req, res) => {
     });
   } catch (error) {
     console.error('Get top salary error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Lỗi server', 
+      error: error.message 
+    });
+  }
+};
+
+// Danh sách nhân viên bị trừ lương
+exports.getDeductedSalary = async (req, res) => {
+  try {
+    const { thang, nam } = req.query;
+
+    if (!thang || !nam) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Vui lòng cung cấp tháng và năm' 
+      });
+    }
+
+    const [salaries] = await db.query(`
+      SELECT 
+        l.ma_nv,
+        nv.ten_nv,
+        pb.ten_phong,
+        cv.ten_chuc_vu,
+        l.tong_gio,
+        nv.luong_co_ban,
+        l.tru_luong,
+        l.luong_thuc_nhan,
+        (40 - l.tong_gio) as gio_thieu
+      FROM LUONG l
+      JOIN NHANVIEN nv ON l.ma_nv = nv.ma_nv
+      JOIN PHONGBAN pb ON nv.ma_phong = pb.ma_phong
+      JOIN CHUCVU cv ON nv.ma_chucvu = cv.ma_chuc_vu
+      WHERE l.thang = ? AND l.nam = ? AND l.tru_luong > 0
+      ORDER BY l.tru_luong DESC
+    `, [thang, nam]);
+
+    const tongTruLuong = salaries.reduce((sum, item) => sum + parseFloat(item.tru_luong), 0);
+
+    res.json({
+      success: true,
+      count: salaries.length,
+      tongTruLuong: tongTruLuong,
+      data: salaries
+    });
+  } catch (error) {
+    console.error('Get deducted salary error:', error);
     res.status(500).json({ 
       success: false,
       message: 'Lỗi server', 
@@ -259,6 +310,7 @@ exports.getSalaryByDepartment = async (req, res) => {
         pb.ten_phong,
         COUNT(l.id) as so_nhan_vien,
         SUM(l.luong_thuc_nhan) as tong_quy_luong,
+        SUM(l.tru_luong) as tong_tru_luong,
         AVG(l.luong_thuc_nhan) as luong_trung_binh,
         MAX(l.luong_thuc_nhan) as luong_cao_nhat,
         MIN(l.luong_thuc_nhan) as luong_thap_nhat
@@ -306,6 +358,7 @@ exports.compareSalary = async (req, res) => {
         l.nam,
         COUNT(DISTINCT l.ma_nv) as so_nhan_vien,
         SUM(l.luong_thuc_nhan) as tong_quy_luong,
+        SUM(l.tru_luong) as tong_tru_luong,
         AVG(l.luong_thuc_nhan) as luong_trung_binh
       FROM LUONG l
       WHERE l.nam = ?
@@ -317,7 +370,7 @@ exports.compareSalary = async (req, res) => {
     res.json({
       success: true,
       count: stats.length,
-      data: stats.reverse() // Đảo ngược để hiển thị từ cũ đến mới
+      data: stats.reverse()
     });
   } catch (error) {
     console.error('Compare salary error:', error);
@@ -329,7 +382,7 @@ exports.compareSalary = async (req, res) => {
   }
 };
 
-// Xóa bảng lương (Admin - cẩn thận)
+// Xóa bảng lương (Admin)
 exports.deleteSalary = async (req, res) => {
   try {
     const { id } = req.params;

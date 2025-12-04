@@ -14,7 +14,7 @@ import PositionList from './pages/Positions/PositionList';
 import AttendanceList from './pages/Attendance/AttendanceList';
 import CheckInOut from './pages/Attendance/CheckInOut';
 import SalaryList from './pages/Salary/SalaryList';
-import SalaryDetail from './pages/Salary/SalaryDetail';
+import SalaryDeductedList from './pages/Salary/SalaryDeductedList';
 import LeaveList from './pages/Leave/LeaveList';
 import LeaveRequest from './pages/Leave/LeaveRequest';
 import LeaveApproval from './pages/Leave/LeaveApproval';
@@ -53,7 +53,7 @@ const App: React.FC = () => {
             
             {/* Salary Routes */}
             <Route path="salary" element={<SalaryList />} />
-            <Route path="salary/:id" element={<SalaryDetail />} />
+            <Route path="salary/deducted" element={<SalaryDeductedList />} />
             
             {/* Leave Routes */}
             <Route path="leave" element={<LeaveList />} />
