@@ -27,7 +27,7 @@ const salaryRoutes = require('./routes/salary');
 const leaveRoutes = require('./routes/leave');
 const contractRoutes = require('./routes/contracts');
 const dashboardRoutes = require('./routes/dashboard');
-
+const employeeDashboardRoutes = require('./routes/employeeDashboard');
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -38,6 +38,7 @@ app.use('/api/salary', salaryRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', employeeDashboardRoutes);
 
 // Root route
 app.get('/', (req, res) => {

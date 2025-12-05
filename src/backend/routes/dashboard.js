@@ -32,16 +32,16 @@ router.get('/attendance-stats', auth, roleCheck('Admin', 'KeToan'), dashboardCon
 // @route   GET /api/dashboard/top-employees
 // @desc    Top 10 nhân viên chăm chỉ nhất
 // @access  Private - Admin
-router.get('/top-employees', auth, roleCheck('Admin'), dashboardController.getTopEmployees);
+router.get('/top-employees', auth, roleCheck('Admin', 'KeToan'), dashboardController.getTopEmployees);
 
 // @route   GET /api/dashboard/leave-stats
 // @desc    Thống kê nghỉ phép tháng này
 // @access  Private - Admin
-router.get('/leave-stats', auth, roleCheck('Admin'), dashboardController.getLeaveStats);
+router.get('/leave-stats', auth, roleCheck('Admin', 'KeToan'), dashboardController.getLeaveStats);
 
 // @route   GET /api/dashboard/recent-activities
 // @desc    Hoạt động gần đây
 // @access  Private - Admin
-router.get('/recent-activities', auth, roleCheck('Admin'), dashboardController.getRecentActivities);
+router.get('/recent-activities', auth, roleCheck('Admin', 'KeToan'), dashboardController.getRecentActivities);
 
 module.exports = router;

@@ -1,9 +1,11 @@
 const db = require('../config/database');
 
-// Tính lương cho một nhân viên
+// Tính lương cho một nhân viên (CÓ BẢO VỆ TRẠNG THÁI)
 exports.calculateSalary = async (req, res) => {
   try {
-    const { ma_nv, thang, nam } = req.body;
+    const { ma_nv, thang, nam, force = false } = req.body;
+    const userRole = req.user.vai_tro;
+    const username = req.user.username;
 
     if (!ma_nv || !thang || !nam) {
       return res.status(400).json({ 
@@ -12,22 +14,79 @@ exports.calculateSalary = async (req, res) => {
       });
     }
 
-    // Gọi stored procedure
-    await db.query('CALL TinhLuongThang(?, ?, ?)', [ma_nv, thang, nam]);
+    const [existing] = await db.query(
+      'SELECT trang_thai FROM LUONG WHERE ma_nv = ? AND thang = ? AND nam = ?',
+      [ma_nv, thang, nam]
+    );
 
-    // Lấy kết quả vừa tính
+    if (existing.length > 0) {
+      const currentStatus = existing[0].trang_thai;
+
+      // ✅ FIX: Khớp với DB ENUM
+      if (currentStatus === 'Đã khóa') {
+        if (userRole !== 'Admin') {
+          return res.status(403).json({
+            success: false,
+            message: `Lương tháng ${thang}/${nam} đã bị khóa. Chỉ Admin mới có thể tính lại.`,
+            locked: true
+          });
+        }
+
+        if (!force) {
+          return res.status(400).json({
+            success: false,
+            message: `Lương tháng ${thang}/${nam} đã bị khóa. Bạn có chắc muốn tính lại?`,
+            needConfirm: true,
+            locked: true
+          });
+        }
+      }
+
+      if (currentStatus === 'Đã xác nhận' && !['Admin', 'KeToan'].includes(userRole)) {
+        return res.status(403).json({
+          success: false,
+          message: `Lương tháng ${thang}/${nam} đã được xác nhận. Chỉ Admin/Kế toán mới có thể tính lại.`,
+          confirmed: true
+        });
+      }
+    }
+
+    await db.query(
+      'CALL TinhLuongThang(?, ?, ?)', 
+      [ma_nv, thang, nam]
+    );
+
     const [salary] = await db.query(`
-      SELECT * FROM LUONG 
-      WHERE ma_nv = ? AND thang = ? AND nam = ?
+      SELECT 
+        l.*,
+        nv.ten_nv,
+        nv.luong_co_ban,
+        pb.ten_phong,
+        cv.ten_chuc_vu
+      FROM LUONG l
+      JOIN NHANVIEN nv ON l.ma_nv = nv.ma_nv
+      JOIN PHONGBAN pb ON nv.ma_phong = pb.ma_phong
+      JOIN CHUCVU cv ON nv.ma_chucvu = cv.ma_chuc_vu
+      WHERE l.ma_nv = ? AND l.thang = ? AND l.nam = ?
     `, [ma_nv, thang, nam]);
 
     res.json({ 
       success: true,
-      message: 'Tính lương thành công',
-      data: salary[0]
+      message: force ? 'Tính lại lương thành công (forced)' : 'Tính lương thành công',
+      data: salary[0],
+      forced: force
     });
   } catch (error) {
     console.error('Calculate salary error:', error);
+
+    if (error.sqlState === '45000' || error.sqlState === '45001') {
+      return res.status(403).json({ 
+        success: false,
+        message: error.message,
+        needConfirm: error.sqlState === '45001'
+      });
+    }
+    
     res.status(500).json({ 
       success: false,
       message: 'Lỗi server', 
@@ -39,7 +98,9 @@ exports.calculateSalary = async (req, res) => {
 // Tính lương cho tất cả nhân viên
 exports.calculateAllSalary = async (req, res) => {
   try {
-    const { thang, nam } = req.body;
+    const { thang, nam, force = false } = req.body;
+    const userRole = req.user.vai_tro;
+    const username = req.user.username;
 
     if (!thang || !nam) {
       return res.status(400).json({ 
@@ -48,20 +109,55 @@ exports.calculateAllSalary = async (req, res) => {
       });
     }
 
+    // ✅ FIX: Khớp với DB ENUM
+    const [lockedCheck] = await db.query(
+      'SELECT COUNT(*) as count FROM LUONG WHERE thang = ? AND nam = ? AND trang_thai = ?',
+      [thang, nam, 'Đã khóa']
+    );
+
+    if (lockedCheck[0].count > 0) {
+      if (userRole !== 'Admin') {
+        return res.status(403).json({
+          success: false,
+          message: `Có ${lockedCheck[0].count} bản ghi lương đã bị khóa. Chỉ Admin mới có thể tính lại.`,
+          locked: true
+        });
+      }
+
+      if (!force) {
+        return res.status(400).json({
+          success: false,
+          message: `Có ${lockedCheck[0].count} bản ghi đã bị khóa. Bạn có chắc muốn tính lại tất cả?`,
+          needConfirm: true,
+          lockedCount: lockedCheck[0].count
+        });
+      }
+    }
+
     const [employees] = await db.query(
       'SELECT ma_nv FROM NHANVIEN WHERE trang_thai = 1'
     );
 
     let successCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
+    const errors = [];
 
     for (const emp of employees) {
       try {
-        await db.query('CALL TinhLuongThang(?, ?, ?)', [emp.ma_nv, thang, nam]);
+        await db.query(
+          'CALL TinhLuongThang(?, ?, ?)', 
+          [emp.ma_nv, thang, nam]
+        );
         successCount++;
       } catch (err) {
-        console.error(`Error calculating salary for ${emp.ma_nv}:`, err);
-        errorCount++;
+        if (err.sqlState === '45000' || err.sqlState === '45001') {
+          skippedCount++;
+          errors.push({ ma_nv: emp.ma_nv, reason: 'locked' });
+        } else {
+          errorCount++;
+          errors.push({ ma_nv: emp.ma_nv, error: err.message });
+        }
       }
     }
 
@@ -71,16 +167,79 @@ exports.calculateAllSalary = async (req, res) => {
       data: {
         total: employees.length,
         success: successCount,
-        error: errorCount
-      }
+        skipped: skippedCount,
+        error: errorCount,
+        forced: force
+      },
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     console.error('Calculate all salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Lock lương tháng
+exports.lockSalary = async (req, res) => {
+  try {
+    const { thang, nam, ghi_chu } = req.body;
+    const username = req.user.username;
+
+    if (!thang || !nam) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp tháng và năm' });
+    }
+
+    await db.query('CALL LockLuong(?, ?, ?, ?)',
+      [thang, nam, username, ghi_chu || 'Khóa lương']
+    );
+
+    res.json({ success: true, message: `Đã khóa lương tháng ${thang}/${nam}` });
+  } catch (error) {
+    console.error('Lock salary error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Unlock
+exports.unlockSalary = async (req, res) => {
+  try {
+    const { thang, nam, ly_do } = req.body;
+    const username = req.user.username;
+    const userRole = req.user.vai_tro;
+
+    if (userRole !== 'Admin') {
+      return res.status(403).json({ success: false, message: 'Chỉ Admin mới có thể mở khóa lương' });
+    }
+
+    if (!thang || !nam) return res.status(400).json({ success: false, message: 'Thiếu dữ liệu' });
+    if (!ly_do) return res.status(400).json({ success: false, message: 'Thiếu lý do mở khóa' });
+
+    await db.query('CALL UnlockLuong(?, ?, ?, ?)',
+      [thang, nam, username, ly_do]
+    );
+
+    res.json({ success: true, message: `Đã mở khóa lương tháng ${thang}/${nam}` });
+  } catch (error) {
+    console.error('Unlock salary error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
+  }
+};
+
+// Confirm
+exports.confirmSalary = async (req, res) => {
+  try {
+    const { thang, nam } = req.body;
+    const username = req.user.username;
+
+    if (!thang || !nam)
+      return res.status(400).json({ success: false, message: 'Thiếu dữ liệu' });
+
+    await db.query('CALL ConfirmLuong(?, ?, ?)', [thang, nam, username]);
+
+    res.json({ success: true, message: `Đã xác nhận lương tháng ${thang}/${nam}` });
+  } catch (error) {
+    console.error('Confirm salary error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
@@ -89,12 +248,8 @@ exports.getMonthlySalary = async (req, res) => {
   try {
     const { thang, nam, ma_phong } = req.query;
 
-    if (!thang || !nam) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Vui lòng cung cấp tháng và năm' 
-      });
-    }
+    if (!thang || !nam)
+      return res.status(400).json({ success: false, message: 'Thiếu dữ liệu' });
 
     let query = `
       SELECT 
@@ -121,30 +276,33 @@ exports.getMonthlySalary = async (req, res) => {
 
     const [salaries] = await db.query(query, params);
 
-    // Tính tổng
-    const tongLuong = salaries.reduce((sum, item) => sum + parseFloat(item.luong_thuc_nhan), 0);
-    const tongTruLuong = salaries.reduce((sum, item) => sum + parseFloat(item.tru_luong || 0), 0);
-    const soNVBiTru = salaries.filter(item => parseFloat(item.tru_luong || 0) > 0).length;
+    const tongLuong = salaries.reduce((s, v) => s + +v.luong_thuc_nhan, 0);
+    const tongTruLuong = salaries.reduce((s, v) => s + +(v.tru_luong || 0), 0);
+    const soNVBiTru = salaries.filter(s => +s.tru_luong > 0).length;
+
+    // ✅ FIX: Trả về đúng tên trạng thái như DB
+    const statusCount = {
+      'Nháp': salaries.filter(s => s.trang_thai === 'Nháp').length,
+      'Đã xác nhận': salaries.filter(s => s.trang_thai === 'Đã xác nhận').length,
+      'Đã khóa': salaries.filter(s => s.trang_thai === 'Đã khóa').length
+    };
 
     res.json({
       success: true,
       count: salaries.length,
-      tongLuong: tongLuong,
-      tongTruLuong: tongTruLuong,
-      soNVBiTru: soNVBiTru,
+      tongLuong,
+      tongTruLuong,
+      soNVBiTru,
+      statusCount,
       data: salaries
     });
   } catch (error) {
     console.error('Get monthly salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
-// Xem chi tiết lương của một nhân viên
+// Xem chi tiết lương nhân viên
 exports.getEmployeeSalary = async (req, res) => {
   try {
     const { ma_nv } = req.params;
@@ -174,39 +332,20 @@ exports.getEmployeeSalary = async (req, res) => {
 
     const [salaries] = await db.query(query, params);
 
-    if (salaries.length === 0) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Không tìm thấy bảng lương' 
-      });
-    }
+    if (salaries.length === 0)
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bảng lương' });
 
-    res.json({
-      success: true,
-      count: salaries.length,
-      data: salaries
-    });
+    res.json({ success: true, count: salaries.length, data: salaries });
   } catch (error) {
     console.error('Get employee salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
-// Top nhân viên lương cao nhất
+// Top lương cao nhất
 exports.getTopSalary = async (req, res) => {
   try {
     const { thang, nam, limit = 10 } = req.query;
-
-    if (!thang || !nam) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Vui lòng cung cấp tháng và năm' 
-      });
-    }
 
     const [salaries] = await db.query(`
       SELECT 
@@ -218,7 +357,8 @@ exports.getTopSalary = async (req, res) => {
         nv.luong_co_ban,
         l.luong_them,
         l.tru_luong,
-        l.luong_thuc_nhan
+        l.luong_thuc_nhan,
+        l.trang_thai
       FROM LUONG l
       JOIN NHANVIEN nv ON l.ma_nv = nv.ma_nv
       JOIN PHONGBAN pb ON nv.ma_phong = pb.ma_phong
@@ -226,34 +366,19 @@ exports.getTopSalary = async (req, res) => {
       WHERE l.thang = ? AND l.nam = ?
       ORDER BY l.luong_thuc_nhan DESC
       LIMIT ?
-    `, [thang, nam, parseInt(limit)]);
+    `, [thang, nam, +limit]);
 
-    res.json({
-      success: true,
-      count: salaries.length,
-      data: salaries
-    });
+    res.json({ success: true, count: salaries.length, data: salaries });
   } catch (error) {
     console.error('Get top salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
-// Danh sách nhân viên bị trừ lương
+// DS nhân viên bị trừ lương
 exports.getDeductedSalary = async (req, res) => {
   try {
     const { thang, nam } = req.query;
-
-    if (!thang || !nam) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Vui lòng cung cấp tháng và năm' 
-      });
-    }
 
     const [salaries] = await db.query(`
       SELECT 
@@ -265,6 +390,7 @@ exports.getDeductedSalary = async (req, res) => {
         nv.luong_co_ban,
         l.tru_luong,
         l.luong_thuc_nhan,
+        l.trang_thai,
         (40 - l.tong_gio) as gio_thieu
       FROM LUONG l
       JOIN NHANVIEN nv ON l.ma_nv = nv.ma_nv
@@ -274,35 +400,24 @@ exports.getDeductedSalary = async (req, res) => {
       ORDER BY l.tru_luong DESC
     `, [thang, nam]);
 
-    const tongTruLuong = salaries.reduce((sum, item) => sum + parseFloat(item.tru_luong), 0);
+    const tongTruLuong = salaries.reduce((s, v) => s + +v.tru_luong, 0);
 
     res.json({
       success: true,
       count: salaries.length,
-      tongTruLuong: tongTruLuong,
+      tongTruLuong,
       data: salaries
     });
   } catch (error) {
     console.error('Get deducted salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
-// Tổng quỹ lương theo phòng ban
+// Quỹ lương theo phòng ban
 exports.getSalaryByDepartment = async (req, res) => {
   try {
     const { thang, nam } = req.query;
-
-    if (!thang || !nam) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Vui lòng cung cấp tháng và năm' 
-      });
-    }
 
     const [stats] = await db.query(`
       SELECT 
@@ -322,21 +437,12 @@ exports.getSalaryByDepartment = async (req, res) => {
       ORDER BY tong_quy_luong DESC
     `, [thang, nam]);
 
-    const tongQuyLuong = stats.reduce((sum, item) => sum + parseFloat(item.tong_quy_luong), 0);
+    const tongQuyLuong = stats.reduce((s, v) => s + +v.tong_quy_luong, 0);
 
-    res.json({
-      success: true,
-      count: stats.length,
-      tongQuyLuong: tongQuyLuong,
-      data: stats
-    });
+    res.json({ success: true, count: stats.length, tongQuyLuong, data: stats });
   } catch (error) {
     console.error('Get salary by department error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
@@ -344,13 +450,6 @@ exports.getSalaryByDepartment = async (req, res) => {
 exports.compareSalary = async (req, res) => {
   try {
     const { nam, soThang = 6 } = req.query;
-
-    if (!nam) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Vui lòng cung cấp năm' 
-      });
-    }
 
     const [stats] = await db.query(`
       SELECT 
@@ -365,47 +464,44 @@ exports.compareSalary = async (req, res) => {
       GROUP BY l.nam, l.thang
       ORDER BY l.nam DESC, l.thang DESC
       LIMIT ?
-    `, [nam, parseInt(soThang)]);
+    `, [nam, +soThang]);
 
-    res.json({
-      success: true,
-      count: stats.length,
-      data: stats.reverse()
-    });
+    res.json({ success: true, count: stats.length, data: stats.reverse() });
   } catch (error) {
     console.error('Compare salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };
 
-// Xóa bảng lương (Admin)
+// Xóa bảng lương
 exports.deleteSalary = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [result] = await db.query('DELETE FROM LUONG WHERE id = ?', [id]);
+    const [salary] = await db.query(
+      'SELECT trang_thai FROM LUONG WHERE id = ?', 
+      [id]
+    );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ 
+    if (salary.length === 0)
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bảng lương' });
+
+    // ✅ FIX: Khớp với DB ENUM
+    if (salary[0].trang_thai === 'Đã khóa') {
+      return res.status(403).json({ 
         success: false,
-        message: 'Không tìm thấy bảng lương' 
+        message: 'Không thể xóa bảng lương đã bị khóa' 
       });
     }
 
-    res.json({ 
-      success: true,
-      message: 'Xóa bảng lương thành công' 
-    });
+    const [result] = await db.query('DELETE FROM LUONG WHERE id = ?', [id]);
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ success: false, message: 'Không tìm thấy bảng lương' });
+
+    res.json({ success: true, message: 'Xóa bảng lương thành công' });
   } catch (error) {
     console.error('Delete salary error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Lỗi server', 
-      error: error.message 
-    });
+    res.status(500).json({ success: false, message: 'Lỗi server', error: error.message });
   }
 };

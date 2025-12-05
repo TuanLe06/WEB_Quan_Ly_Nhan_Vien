@@ -7,6 +7,11 @@ export interface ApiResponse<T = any> {
   data?: T;
   count?: number;
   error?: string;
+  // Extra fields cho calculate API
+  needConfirm?: boolean;
+  locked?: boolean;
+  confirmed?: boolean;
+  forced?: boolean;
 }
 
 export interface PaginationData {
@@ -127,7 +132,7 @@ export interface AttendanceStats {
 }
 
 // ============================================
-// SALARY TYPES
+// SALARY TYPES (FIXED - KHỚP VỚI BE & DB)
 // ============================================
 export interface Salary {
   id: number;
@@ -135,13 +140,49 @@ export interface Salary {
   ten_nv?: string;
   ten_phong?: string;
   ten_chuc_vu?: string;
+
   thang: number;
   nam: number;
   tong_gio: number;
-  luong_co_ban?: number;
+
+  // ✅ FIX: Khớp với DB schema - có cả 2 field
+  luong_co_ban?: number; // Từ JOIN NHANVIEN (lương hiện tại)
+  luong_co_ban_thoi_diem?: number; // Snapshot trong LUONG table
+
   luong_them: number;
+  tru_luong: number; // ✅ Changed: Không optional, default 0
   luong_thuc_nhan: number;
+
   ngay_tinh: string;
+
+  // ✅ FIX: Trạng thái khớp với DB ENUM và BE response
+  trang_thai?: 'Bản nháp' | 'Đã xác nhận' | 'Đã khóa';
+  nguoi_chot?: string;
+  ngay_chot?: string;
+  ghi_chu?: string;
+}
+
+// Deducted salary (lương bị trừ giờ)
+export interface DeductedSalary extends Salary {
+  gio_thieu?: number;
+}
+
+// Response thu thập dữ liệu lương theo tháng
+export interface SalaryMonthlyResponse {
+  success: boolean;
+  count: number;
+  tongLuong: number;
+  tongTruLuong: number;
+  soNVBiTru: number;
+
+  // ✅ FIX: Khớp với BE response
+  statusCount?: {
+    'Bản nháp': number;
+    'Đã xác nhận': number;
+    'Đã khóa': number;
+  };
+
+  data: Salary[];
 }
 
 // ============================================

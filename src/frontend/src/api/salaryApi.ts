@@ -2,19 +2,50 @@ import axios from './axiosConfig';
 import { Salary, ApiResponse } from '../types';
 
 export const salaryApi = {
-  // POST /api/salary/calculate
-  calculateOne: async (ma_nv: string, thang: number, nam: number): Promise<ApiResponse<Salary>> => {
+  // POST /api/salary/calculate (có force cho Admin)
+  calculateOne: async (ma_nv: string, thang: number, nam: number, force: boolean = false): Promise<ApiResponse<Salary>> => {
     const { data } = await axios.post<ApiResponse<Salary>>('/salary/calculate', {
       ma_nv,
       thang,
       nam,
+      force,
     });
     return data;
   },
 
-  // POST /api/salary/calculate-all
-  calculateAll: async (thang: number, nam: number): Promise<ApiResponse> => {
+  // POST /api/salary/calculate-all (có force cho Admin)
+  calculateAll: async (thang: number, nam: number, force: boolean = false): Promise<ApiResponse> => {
     const { data } = await axios.post<ApiResponse>('/salary/calculate-all', {
+      thang,
+      nam,
+      force,
+    });
+    return data;
+  },
+
+  // POST /api/salary/lock
+  lock: async (thang: number, nam: number, ghi_chu?: string): Promise<ApiResponse> => {
+    const { data } = await axios.post<ApiResponse>('/salary/lock', {
+      thang,
+      nam,
+      ghi_chu,
+    });
+    return data;
+  },
+
+  // POST /api/salary/unlock (chỉ Admin)
+  unlock: async (thang: number, nam: number, ly_do: string): Promise<ApiResponse> => {
+    const { data } = await axios.post<ApiResponse>('/salary/unlock', {
+      thang,
+      nam,
+      ly_do,
+    });
+    return data;
+  },
+
+  // POST /api/salary/confirm
+  confirm: async (thang: number, nam: number): Promise<ApiResponse> => {
+    const { data } = await axios.post<ApiResponse>('/salary/confirm', {
       thang,
       nam,
     });

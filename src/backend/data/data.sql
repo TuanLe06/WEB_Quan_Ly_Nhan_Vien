@@ -1,6 +1,6 @@
 -- ==========================================
 -- HỆ THỐNG QUẢN LÝ NHÂN VIÊN
--- FULL SQL SCHEMA HOÀN CHỈNH
+-- FULL SQL SCHEMA HOÀN CHỈNH (ĐÃ THÊM SNAPSHOT)
 -- ==========================================
 
 DROP DATABASE IF EXISTS QuanLyNhanVien;
@@ -40,8 +40,6 @@ CREATE TABLE NHANVIEN (
     ngay_vao_lam DATE NOT NULL,
     trang_thai TINYINT DEFAULT 1,
 
-    avatar TEXT NULL,
-    dia_chi VARCHAR(255) NULL,
     so_dien_thoai VARCHAR(20) NULL,
     email VARCHAR(100) NULL,
 
@@ -74,16 +72,20 @@ CREATE TABLE CHAMCONG (
 ) ENGINE=InnoDB;
 
 -- ==========================================
--- 5. BẢNG LƯƠNG
+-- 5. BẢNG LƯƠNG (ĐÃ THÊM SNAPSHOT)
 -- ==========================================
 CREATE TABLE LUONG (
     id INT AUTO_INCREMENT PRIMARY KEY,
     ma_nv VARCHAR(10) NOT NULL,
     thang INT NOT NULL CHECK (thang BETWEEN 1 AND 12),
     nam INT NOT NULL CHECK (nam >= 2000),
+
+    -- >>> SNAPSHOT <<<
+    luong_co_ban_thoi_diem DECIMAL(12,2) DEFAULT 0,
+
     tong_gio FLOAT DEFAULT 0,
     luong_them DECIMAL(12,2) DEFAULT 0,
-    tru_luong DECIMAL(12,2) DEFAULT 0,     -- CỘT TRỪ LƯƠNG ĐÃ THÊM
+    tru_luong DECIMAL(12,2) DEFAULT 0,
     luong_thuc_nhan DECIMAL(12,2) DEFAULT 0,
     ngay_tinh DATETIME DEFAULT CURRENT_TIMESTAMP,
 
@@ -95,8 +97,32 @@ CREATE TABLE LUONG (
     INDEX idx_ma_nv (ma_nv)
 ) ENGINE=InnoDB;
 
+ALTER TABLE LUONG
+ADD COLUMN trang_thai ENUM('Nháp', 'Đã xác nhận', 'Đã khóa') DEFAULT 'Nháp' AFTER ngay_tinh,
+ADD COLUMN nguoi_chot VARCHAR(50) NULL AFTER trang_thai,
+ADD COLUMN ngay_chot DATETIME NULL AFTER nguoi_chot,
+ADD COLUMN ghi_chu TEXT NULL AFTER ngay_chot;
+
+CREATE OR REPLACE VIEW v_TrangThaiLuong AS
+SELECT 
+    l.id,
+    l.ma_nv,
+    n.ten_nv,
+    l.thang,
+    l.nam,
+    l.tong_gio,
+    l.luong_them,
+    l.tru_luong,
+    l.luong_thuc_nhan,
+    l.trang_thai,
+    l.ngay_chot,
+    l.nguoi_chot
+FROM LUONG l
+JOIN NHANVIEN n ON l.ma_nv = n.ma_nv
+ORDER BY l.nam DESC, l.thang DESC, n.ten_nv;
+
 -- ==========================================
--- 6. BẢNG NGHỈ PHÉP
+-- 6. NGHỈ PHÉP — nguyên
 -- ==========================================
 CREATE TABLE NGHIPHEP (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -118,7 +144,7 @@ CREATE TABLE NGHIPHEP (
 ) ENGINE=InnoDB;
 
 -- ==========================================
--- 7. BẢNG HỢP ĐỒNG
+-- 7. HỢP ĐỒNG — nguyên
 -- ==========================================
 CREATE TABLE HOPDONG (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -142,7 +168,7 @@ CREATE TABLE HOPDONG (
 ) ENGINE=InnoDB;
 
 -- ==========================================
--- 8. BẢNG NGƯỜI DÙNG
+-- 8. NGƯỜI DÙNG — nguyên
 -- ==========================================
 CREATE TABLE NGUOIDUNG (
     username VARCHAR(50) PRIMARY KEY,
@@ -160,19 +186,21 @@ CREATE TABLE NGUOIDUNG (
 ) ENGINE=InnoDB;
 
 -- ==========================================
--- PROCEDURE TÍNH GIỜ LÀM
+-- TRIGGER TÍNH GIỜ
 -- ==========================================
 DELIMITER //
-CREATE PROCEDURE TinhSoGioLamViec(IN p_id INT)
+CREATE TRIGGER trg_TinhGioLamViec 
+BEFORE UPDATE ON CHAMCONG
+FOR EACH ROW
 BEGIN
-    UPDATE CHAMCONG 
-    SET so_gio = TIMESTAMPDIFF(MINUTE, gio_vao, gio_ra) / 60
-    WHERE id = p_id AND gio_ra IS NOT NULL;
+    IF NEW.gio_ra IS NOT NULL THEN
+        SET NEW.so_gio = TIMESTAMPDIFF(MINUTE, NEW.gio_vao, NEW.gio_ra) / 60;
+    END IF;
 END //
 DELIMITER ;
 
 -- ==========================================
--- PROCEDURE TÍNH LƯƠNG THÁNG (ĐẦY ĐỦ TRỪ LƯƠNG)
+-- PROCEDURE TÍNH LƯƠNG (ĐÃ THÊM SNAPSHOT)
 -- ==========================================
 DELIMITER //
 CREATE PROCEDURE TinhLuongThang(IN p_ma_nv VARCHAR(10), IN p_thang INT, IN p_nam INT)
@@ -191,6 +219,7 @@ BEGIN
       AND MONTH(ngay_lam) = p_thang 
       AND YEAR(ngay_lam) = p_nam;
 
+    -- >>> SNAPSHOT <<<
     SELECT luong_co_ban INTO v_luong_co_ban
     FROM NHANVIEN WHERE ma_nv = p_ma_nv;
 
@@ -199,12 +228,10 @@ BEGIN
         SET v_tru_luong = (v_gio_thieu / v_gio_chuan) * v_luong_co_ban;
         SET v_luong_them = 0;
         SET v_luong_thuc_nhan = v_luong_co_ban - v_tru_luong;
-
     ELSEIF v_tong_gio = v_gio_chuan THEN
         SET v_tru_luong = 0;
         SET v_luong_them = 0;
         SET v_luong_thuc_nhan = v_luong_co_ban;
-
     ELSE
         SET v_tru_luong = 0;
         SET v_luong_them = (v_tong_gio - v_gio_chuan) * (v_luong_co_ban / v_gio_chuan) * 1.5;
@@ -215,10 +242,18 @@ BEGIN
     SET v_luong_them = ROUND(v_luong_them, 2);
     SET v_luong_thuc_nhan = ROUND(v_luong_thuc_nhan, 2);
 
-    INSERT INTO LUONG (ma_nv, thang, nam, tong_gio, luong_them, tru_luong, luong_thuc_nhan)
-    VALUES (p_ma_nv, p_thang, p_nam, v_tong_gio, v_luong_them, v_tru_luong, v_luong_thuc_nhan)
+    INSERT INTO LUONG (
+        ma_nv, thang, nam,
+        luong_co_ban_thoi_diem,   -- <<< SNAPSHOT
+        tong_gio, luong_them, tru_luong, luong_thuc_nhan
+    ) VALUES (
+        p_ma_nv, p_thang, p_nam,
+        v_luong_co_ban,           -- <<< snapshot value
+        v_tong_gio, v_luong_them, v_tru_luong, v_luong_thuc_nhan
+    )
     ON DUPLICATE KEY UPDATE
         tong_gio = v_tong_gio,
+        luong_co_ban_thoi_diem = v_luong_co_ban,    -- <<< UPDATE SNAPSHOT
         luong_them = v_luong_them,
         tru_luong = v_tru_luong,
         luong_thuc_nhan = v_luong_thuc_nhan,
@@ -227,21 +262,7 @@ END //
 DELIMITER ;
 
 -- ==========================================
--- TRIGGER TÍNH GIỜ
--- ==========================================
-DELIMITER //
-CREATE TRIGGER trg_TinhGioLamViec 
-BEFORE UPDATE ON CHAMCONG
-FOR EACH ROW
-BEGIN
-    IF NEW.gio_ra IS NOT NULL THEN
-        SET NEW.so_gio = TIMESTAMPDIFF(MINUTE, NEW.gio_vao, NEW.gio_ra) / 60;
-    END IF;
-END //
-DELIMITER ;
-
--- ==========================================
--- VIEW THỐNG KÊ TRỪ LƯƠNG
+-- VIEW THỐNG KÊ TRỪ LƯƠNG — nguyên
 -- ==========================================
 CREATE OR REPLACE VIEW v_ThongKeTruLuong AS
 SELECT 

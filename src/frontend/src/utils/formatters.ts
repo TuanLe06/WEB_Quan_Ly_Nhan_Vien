@@ -1,5 +1,14 @@
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addHours } from 'date-fns';
 import { vi } from 'date-fns/locale';
+
+/**
+ * Convert UTC date to Vietnam timezone (UTC+7)
+ */
+const toVietnamTime = (date: string | Date): Date => {
+  const dateObj = typeof date === 'string' ? parseISO(date) : date;
+  // Add 7 hours to convert UTC to Vietnam time
+  return addHours(dateObj, 7);
+};
 
 /**
  * Format currency (VND)
@@ -19,29 +28,44 @@ export const formatNumber = (num: number): string => {
 };
 
 /**
- * Format date
+ * Format date (converts UTC to Vietnam time)
  */
 export const formatDate = (date: string | Date, formatStr: string = 'dd/MM/yyyy'): string => {
   try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
-    return format(dateObj, formatStr, { locale: vi });
+    const vnDate = toVietnamTime(date);
+    return format(vnDate, formatStr, { locale: vi });
   } catch (error) {
     return '';
   }
 };
 
 /**
- * Format date time
+ * Format date time (converts UTC to Vietnam time)
  */
 export const formatDateTime = (date: string | Date): string => {
   return formatDate(date, 'dd/MM/yyyy HH:mm');
 };
 
 /**
- * Format time
+ * Format time - handles both Date objects and time strings (HH:mm:ss)
  */
-export const formatTime = (date: string | Date): string => {
-  return formatDate(date, 'HH:mm');
+export const formatTime = (time: string | Date): string => {
+  if (!time) return '--:--';
+  
+  try {
+    // If it's a time string (HH:mm:ss or HH:mm)
+    if (typeof time === 'string') {
+      const parts = time.split(':');
+      if (parts.length >= 2) {
+        return `${parts[0]}:${parts[1]}`;
+      }
+    }
+    
+    // If it's a Date object
+    return formatDate(time, 'HH:mm');
+  } catch (error) {
+    return '--:--';
+  }
 };
 
 /**
