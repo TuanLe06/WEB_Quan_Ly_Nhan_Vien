@@ -28,7 +28,7 @@ import NotFound from './pages/NotFound';
 import Unauthorized from './pages/Unauthorized';
 import './App.css';
 import EmployeeAttendance from './pages/Attendance/EmployeeAttendance';
-
+import EmployeeRegister from './pages/EmployeeRegister/EmployeeRegister';
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -154,6 +154,11 @@ const App: React.FC = () => {
                 </RoleRoute>
               } />
             </Route>
+            <Route path="employee-register" element={
+              <RoleRoute allowedRoles={['Admin']}>
+                <EmployeeRegister />
+              </RoleRoute>
+            } />
           </Route>
           
           <Route path="*" element={<NotFound />} />
