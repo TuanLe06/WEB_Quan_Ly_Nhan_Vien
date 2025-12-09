@@ -60,7 +60,7 @@ router.get('/:id', auth, roleCheck('Admin'), contractController.getContractById)
 // @route   PUT /api/contracts/:id
 // @desc    Cập nhật hợp đồng
 // @access  Private - Admin
-router.put('/:id', auth, roleCheck('Admin'), contractController.updateContract);
+router.put('/:id', auth, roleCheck('Admin'),upload.single('file_hop_dong'), contractController.updateContract);
 
 // @route   DELETE /api/contracts/:id
 // @desc    Xóa hợp đồng

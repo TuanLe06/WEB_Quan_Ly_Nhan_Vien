@@ -51,6 +51,11 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.stat-icon[data-color="#2563eb"] { background: #2563eb; }
+.stat-icon[data-color="#10b981"] { background: #10b981; }
+.stat-icon[data-color="#f59e0b"] { background: #f59e0b; }
+.stat-icon[data-color="#8b5cf6"] { background: #8b5cf6; }
+
 .stat-content {
   flex: 1;
 }
@@ -87,11 +92,11 @@
 }
 
 /* ============================================ */
-/* DASHBOARD GRID */
+/* DASHBOARD GRID - 3 COLUMNS */
 /* ============================================ */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
@@ -158,10 +163,11 @@
   height: 100%;
   border-radius: 4px;
   transition: width 0.6s ease;
+  background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
 /* ============================================ */
-/* TOP EMPLOYEES */
+/* TOP EMPLOYEES & TOP SALARY */
 /* ============================================ */
 .top-employees-list {
   display: flex;
@@ -184,11 +190,14 @@
   transform: translateX(4px);
 }
 
+.top-salary-item:hover {
+  background: #fef3c7;
+}
+
 .top-rank {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
   color: white;
   display: flex;
   align-items: center;
@@ -196,13 +205,27 @@
   font-weight: 700;
   font-size: 14px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
+/* Rank colors for top employees (chăm chỉ) */
+.rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); }
+.rank-2 { background: linear-gradient(135deg, #C0C0C0, #808080); }
+.rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+.rank-4 { background: linear-gradient(135deg, #667eea, #764ba2); }
+.rank-5 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+
+/* Rank colors for top salary (lương cao) */
+.salary-rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); }
+.salary-rank-2 { background: linear-gradient(135deg, #C0C0C0, #808080); }
+.salary-rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+.salary-rank-4 { background: linear-gradient(135deg, #667eea, #764ba2); }
+.salary-rank-5 { background: linear-gradient(135deg, #f093fb, #f5576c); }
 
 .top-employee-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f093fb, #f5576c);
   color: white;
   display: flex;
   align-items: center;
@@ -210,10 +233,26 @@
   font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* Avatar colors for top employees (chăm chỉ) */
+.avatar-1 { background: #667eea; }
+.avatar-2 { background: #f093fb; }
+.avatar-3 { background: #4facfe; }
+.avatar-4 { background: #fa709a; }
+.avatar-5 { background: #30cfd0; }
+
+/* Avatar colors for top salary (lương cao) */
+.salary-avatar-1 { background: #FFD700; }
+.salary-avatar-2 { background: #C0C0C0; }
+.salary-avatar-3 { background: #CD7F32; }
+.salary-avatar-4 { background: #667eea; }
+.salary-avatar-5 { background: #f093fb; }
 
 .top-employee-info {
   flex: 1;
+  min-width: 0;
 }
 
 .top-employee-name {
@@ -221,17 +260,31 @@
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .top-employee-dept {
   font-size: 12px;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .top-employee-hours {
   font-size: 16px;
   font-weight: 700;
   color: var(--primary);
+  white-space: nowrap;
+}
+
+.top-employee-salary {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f59e0b;
+  white-space: nowrap;
 }
 
 /* ============================================ */
@@ -380,19 +433,27 @@
 /* ============================================ */
 /* RESPONSIVE */
 /* ============================================ */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .dashboard-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
   
-  .dashboard-card-full {
-    grid-column: 1;
+  .dashboard-card:first-child {
+    grid-column: 1 / -1;
   }
 }
 
 @media (max-width: 1024px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-card:first-child {
+    grid-column: 1;
   }
 }
 
@@ -432,6 +493,10 @@
     height: 36px;
     font-size: 13px;
   }
+  
+  .top-employee-salary {
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -460,5 +525,9 @@
   .department-name,
   .activity-text {
     font-size: 13px;
+  }
+  
+  .top-employee-salary {
+    font-size: 12px;
   }
 }

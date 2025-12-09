@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardApi } from '../../api/dashboardApi';
+import { salaryApi } from '../../api/salaryApi';
 import Card from '../../components/common/Card';
 import Loading from '../../components/common/Loading';
 import { formatCurrency } from '../../utils/formatters';
@@ -21,6 +22,7 @@ const Dashboard: React.FC = () => {
   const [employeesByPos, setEmployeesByPos] = useState<any[]>([]);
   const [salaryTrend, setSalaryTrend] = useState<any[]>([]);
   const [topEmployees, setTopEmployees] = useState<any[]>([]);
+  const [topSalaries, setTopSalaries] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   useEffect(() => {
@@ -31,6 +33,9 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
       // Load tất cả data song song
       const [
         statsRes,
@@ -38,6 +43,7 @@ const Dashboard: React.FC = () => {
         posRes,
         salaryRes,
         topRes,
+        topSalaryRes,
         activitiesRes
       ] = await Promise.all([
         dashboardApi.getStats(),
@@ -45,6 +51,7 @@ const Dashboard: React.FC = () => {
         dashboardApi.getEmployeesByPosition(),
         dashboardApi.getSalaryTrend(6),
         dashboardApi.getTopEmployees(10),
+        salaryApi.getTop(currentMonth, currentYear, 5),
         dashboardApi.getRecentActivities(10)
       ]);
 
@@ -108,6 +115,7 @@ const Dashboard: React.FC = () => {
       if (posRes.success) setEmployeesByPos(posRes.data || []);
       if (salaryRes.success) setSalaryTrend(salaryRes.data || []);
       if (topRes.success) setTopEmployees(topRes.data || []);
+      if (topSalaryRes.success) setTopSalaries(topSalaryRes.data || []);
       if (activitiesRes.success) setRecentActivities(activitiesRes.data || []);
 
     } catch (error) {
@@ -186,7 +194,7 @@ const Dashboard: React.FC = () => {
                     className="department-bar-fill" 
                     style={{ 
                       width: `${(dept.so_luong / Math.max(...employeesByDept.map(d => d.so_luong))) * 100}%`,
-                      background: `linear-gradient(135deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`
+                      background: `linear-gradient(135deg, #667eea, #764ba2)`
                     }}
                   />
                 </div>
@@ -195,13 +203,15 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* Top nhân viên */}
-        <Card title="Top 5 nhân viên xuất sắc" className="dashboard-card">
+        {/* Top nhân viên chăm chỉ */}
+        <Card title="Top 5 nhân viên chăm chỉ" className="dashboard-card">
           <div className="top-employees-list">
             {topEmployees.slice(0, 5).map((emp, index) => (
               <div key={index} className="top-employee-item">
-                <div className="top-rank">#{index + 1}</div>
-                <div className="top-employee-avatar">
+                <div className={`top-rank rank-${index + 1}`}>#{index + 1}</div>
+                <div className="top-employee-avatar" style={{
+                  background: ['#667eea', '#f093fb', '#4facfe', '#fa709a', '#30cfd0'][index]
+                }}>
                   {emp.ten_nv?.charAt(0).toUpperCase()}
                 </div>
                 <div className="top-employee-info">
@@ -213,6 +223,32 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </Card>
+
+        {/* Top nhân viên lương cao nhất */}
+        <Card title="Top 5 nhân viên lương cao nhất" className="dashboard-card">
+          <div className="top-employees-list">
+            {topSalaries.slice(0, 5).map((emp, index) => (
+              <div key={index} className="top-employee-item top-salary-item">
+                <div className={`top-rank rank-${index + 1}`}>#{index + 1}</div>
+                <div className="top-employee-avatar" style={{
+                  background: ['#FFD700', '#C0C0C0', '#CD7F32', '#667eea', '#f093fb'][index]
+                }}>
+                  {emp.ten_nv?.charAt(0).toUpperCase()}
+                </div>
+                <div className="top-employee-info">
+                  <div className="top-employee-name">{emp.ten_nv}</div>
+                  <div className="top-employee-dept">{emp.ten_phong}</div>
+                </div>
+                <div className="top-employee-salary">
+                  {formatCurrency(emp.luong_thuc_nhan)}
+                </div>
+              </div>
+            ))}
+            {topSalaries.length === 0 && (
+              <p className="empty-message">Chưa có dữ liệu lương tháng này</p>
+            )}
           </div>
         </Card>
 
