@@ -22,7 +22,6 @@ exports.calculateSalary = async (req, res) => {
     if (existing.length > 0) {
       const currentStatus = existing[0].trang_thai;
 
-      // ✅ FIX: Khớp với DB ENUM
       if (currentStatus === 'Đã khóa') {
         if (userRole !== 'Admin') {
           return res.status(403).json({
@@ -109,7 +108,6 @@ exports.calculateAllSalary = async (req, res) => {
       });
     }
 
-    // ✅ FIX: Khớp với DB ENUM
     const [lockedCheck] = await db.query(
       'SELECT COUNT(*) as count FROM LUONG WHERE thang = ? AND nam = ? AND trang_thai = ?',
       [thang, nam, 'Đã khóa']
@@ -280,7 +278,6 @@ exports.getMonthlySalary = async (req, res) => {
     const tongTruLuong = salaries.reduce((s, v) => s + +(v.tru_luong || 0), 0);
     const soNVBiTru = salaries.filter(s => +s.tru_luong > 0).length;
 
-    // ✅ FIX: Trả về đúng tên trạng thái như DB
     const statusCount = {
       'Nháp': salaries.filter(s => s.trang_thai === 'Nháp').length,
       'Đã xác nhận': salaries.filter(s => s.trang_thai === 'Đã xác nhận').length,
@@ -486,7 +483,6 @@ exports.deleteSalary = async (req, res) => {
     if (salary.length === 0)
       return res.status(404).json({ success: false, message: 'Không tìm thấy bảng lương' });
 
-    // ✅ FIX: Khớp với DB ENUM
     if (salary[0].trang_thai === 'Đã khóa') {
       return res.status(403).json({ 
         success: false,
