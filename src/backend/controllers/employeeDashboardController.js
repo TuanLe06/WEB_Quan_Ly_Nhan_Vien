@@ -40,7 +40,7 @@ exports.getEmployeeDashboard = async (req, res) => {
         COUNT(*) as so_ngay_lam,
         COALESCE(SUM(so_gio), 0) as tong_gio,
         COALESCE(AVG(so_gio), 0) as gio_trung_binh,
-        COUNT(CASE WHEN trang_thai = 'Đi muộn' THEN 1 END) as di_muon,
+        COUNT(CASE WHEN trang_thai = 'Muộn' THEN 1 END) as di_muon,
         COUNT(CASE WHEN trang_thai = 'Về sớm' THEN 1 END) as ve_som
       FROM CHAMCONG
       WHERE ma_nv = ? AND MONTH(ngay_lam) = ? AND YEAR(ngay_lam) = ?
@@ -52,7 +52,7 @@ exports.getEmployeeDashboard = async (req, res) => {
         COUNT(*) as so_ngay_lam,
         COALESCE(SUM(so_gio), 0) as tong_gio,
         COALESCE(AVG(so_gio), 0) as gio_trung_binh,
-        COUNT(CASE WHEN trang_thai = 'Đi muộn' THEN 1 END) as di_muon,
+        COUNT(CASE WHEN trang_thai = 'Muộn' THEN 1 END) as di_muon,
         COUNT(CASE WHEN trang_thai = 'Về sớm' THEN 1 END) as ve_som
       FROM CHAMCONG
       WHERE ma_nv = ? AND MONTH(ngay_lam) = ? AND YEAR(ngay_lam) = ?
